@@ -1,0 +1,345 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Importar fonte característica para tattoo studios */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    /* Paleta Tattoo Studio - Preto, Dourado e Cinza */
+    --background: 0 0% 6%; /* Preto profundo */
+    --foreground: 45 8% 88%; /* Branco cremoso */
+    --card: 0 0% 9%; /* Cinza muito escuro */
+    --card-foreground: 45 8% 85%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 45 8% 85%;
+    --primary: 45 85% 58%; /* Dourado vibrante */
+    --primary-foreground: 0 0% 8%;
+    --secondary: 0 0% 15%; /* Cinza escuro */
+    --secondary-foreground: 45 8% 82%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 43 74% 49%; /* Dourado mais escuro */
+    --accent-foreground: 0 0% 8%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 18%; /* Bordas sutis cinza */
+    --input: 0 0% 12%;
+    --ring: 45 85% 58%;
+    --radius: 0.25rem; /* Bordas mais angulares, industrial */
+    
+    /* Cores especiais para o tema tattoo dourado */
+    --ink-black: 0 0% 3%; /* Preto absoluto */
+    --paper-cream: 45 15% 92%; /* Creme papel */
+    --gold-light: 45 90% 65%; /* Dourado claro */
+    --gold-dark: 43 74% 35%; /* Dourado escuro */
+    --silver: 210 8% 70%; /* Prata metalizada */
+    --charcoal: 0 0% 20%; /* Carvão */
+    
+    --chart-1: 45 85% 58%;
+    --chart-2: 210 8% 70%;
+    --chart-3: 0 0% 15%;
+    --chart-4: 43 74% 49%;
+    --chart-5: 0 0% 60%;
+  }
+
+  .light {
+    /* Versão light com papel creme vintage */
+    --background: 45 15% 92%; /* Papel creme */
+    --foreground: 0 0% 8%;
+    --card: 45 20% 96%; /* Branco cremoso */
+    --card-foreground: 0 0% 8%;
+    --popover: 45 20% 96%;
+    --popover-foreground: 0 0% 8%;
+    --primary: 43 74% 49%;
+    --primary-foreground: 45 15% 92%;
+    --secondary: 210 8% 88%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 210 8% 85%;
+    --muted-foreground: 0 0% 35%;
+    --accent: 45 85% 58%;
+    --accent-foreground: 0 0% 8%;
+    --border: 210 8% 80%;
+    --input: 210 8% 88%;
+    --ring: 43 74% 49%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+  
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', sans-serif;
+    /* Pattern de textura sutil para simular papel */
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(255,215,0,0.02) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(255,215,0,0.02) 0%, transparent 50%),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,215,0,0.008) 2px,
+        rgba(255,215,0,0.008) 4px
+      );
+    background-size: 200px 200px, 150px 150px, 20px 20px;
+    background-attachment: fixed;
+  }
+  
+  /* Tipografia característica */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: hsl(var(--foreground));
+  }
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Components e Patterns para Tattoo Studio */
+@layer components {
+  /* Card especial com efeito dourado */
+  .tattoo-card {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%);
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius));
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .tattoo-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary)), transparent);
+    opacity: 0.5;
+  }
+  
+  /* Padrão de linhas douradas */
+  .golden-lines {
+    background-image: 
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255,215,0,0.03) 10px,
+        rgba(255,215,0,0.03) 11px
+      );
+  }
+  
+  /* Padrão de pontos para fundos */
+  .dot-pattern {
+    background-image: 
+      radial-gradient(circle at 2px 2px, rgba(255,215,0,0.08) 1px, transparent 0);
+    background-size: 20px 20px;
+  }
+  
+  /* Efeito de tinta dourada */
+  .gold-ink {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 600;
+  }
+  
+  /* Sidebar com pattern especial */
+  .sidebar-tattoo {
+    background: 
+      linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%);
+    border-right: 1px solid hsl(var(--border));
+    position: relative;
+  }
+  
+  .sidebar-tattoo::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, hsl(var(--primary)), transparent);
+    opacity: 0.3;
+  }
+  
+  /* Botão estilo tattoo */
+  .btn-tattoo {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    color: hsl(var(--primary-foreground));
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: calc(var(--radius));
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-tattoo::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s ease;
+  }
+  
+  .btn-tattoo:hover::before {
+    left: 100%;
+  }
+  
+  .btn-tattoo:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255,215,0,0.25);
+  }
+}
+
+/* Scrollbar personalizada para tema tattoo */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--accent)));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Animações e efeitos */
+@layer utilities {
+  .animate-gold-glow {
+    animation: goldGlow 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes goldGlow {
+    from {
+      box-shadow: 0 0 5px rgba(255,215,0,0.3), 0 0 10px rgba(255,215,0,0.2);
+    }
+    to {
+      box-shadow: 0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.3);
+    }
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+  }
+  
+  /* Transições suaves */
+  .transition-all {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-colors {
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+}
+
+  /* Estilo para cards com hover */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius));
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3), 0 0 20px rgba(255,215,0,0.1);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  /* Gradientes personalizados para tema tattoo */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--muted)) 100%);
+  }
+  
+  .gradient-gold {
+    background: linear-gradient(135deg, 
+      hsl(var(--primary)) 0%, 
+      hsl(45 95% 65%) 50%, 
+      hsl(var(--accent)) 100%);
+  }
+  
+  .gradient-subtle {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%);
+  }
+
+
+/* Classes utilitárias especiais */
+.text-gold {
+  color: hsl(var(--primary));
+}
+
+.bg-ink {
+  background-color: hsl(var(--ink-black));
+}
+
+.bg-charcoal {
+  background-color: hsl(var(--charcoal));
+}
+
+.border-gold {
+  border-color: hsl(var(--primary));
+}
+
+/* Efeitos especiais para elementos interativos */
+.interactive-element {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.interactive-element:hover {
+  transform: translateY(-1px);
+}
+
+.interactive-element::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary)), transparent);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.interactive-element:hover::after {
+  width: 100%;
+}
+
+/* Typography melhorada */
+.heading-gold {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+}
