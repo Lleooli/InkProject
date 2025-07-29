@@ -13,6 +13,12 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "InkFlow - Assistente Completo para Tatuadores",
   description: "Gerencie seu estúdio de tatuagem com facilidade",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon.svg', type: 'image/svg+xml' }
+    ],
+  },
 }
 
 export default function RootLayout({
