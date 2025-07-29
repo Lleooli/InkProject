@@ -28,6 +28,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Silenciar erros de extensões do navegador
+              window.addEventListener('error', function(e) {
+                if (e.message && e.message.includes('message channel closed')) {
+                  e.preventDefault();
+                  return false;
+                }
+              });
+              
+              window.addEventListener('unhandledrejection', function(e) {
+                if (e.reason && e.reason.message && e.reason.message.includes('message channel closed')) {
+                  e.preventDefault();
+                  return false;
+                }
+              });
+            `,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
