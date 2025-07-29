@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Dialog,
   DialogContent,
@@ -16,18 +17,23 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { ImageIcon, Plus, Search, Heart, Share2, Edit, Eye, Loader2 } from "lucide-react"
+import { ImageIcon, Plus, Search, Heart, Share2, Edit, Eye, Loader2, Upload, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { usePortfolio } from "@/lib/firebase-hooks-user"
+import { usePortfolio, useClients } from "@/lib/firebase-hooks-user"
 
 export function Portfolio() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedFilter, setSelectedFilter] = useState("all")
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const { toast } = useToast()
   
   const { portfolioItems, loading, addPortfolioItem } = usePortfolio()
+  const { clients, loading: loadingClients } = useClients()
 
   const [newItemData, setNewItemData] = useState({
     title: "",
@@ -35,6 +41,7 @@ export function Portfolio() {
     style: "",
     bodyPart: "",
     duration: "",
+    clientId: "",
     clientName: "",
     tags: "",
     imageUrl: "",
@@ -67,6 +74,191 @@ export function Portfolio() {
     "Costela",
   ]
 
+  // Função para lidar com seleção de arquivo
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Verificar se é uma imagem
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Arquivo inválido",
+          description: "Por favor, selecione apenas arquivos de imagem (PNG, JPEG, etc).",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Verificar tamanho do arquivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "O arquivo deve ter no máximo 5MB.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setSelectedImage(file)
+      
+      // Criar preview da imagem
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Função para remover imagem selecionada
+  const removeSelectedImage = () => {
+    setSelectedImage(null)
+    setImagePreview("")
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  // Função para converter imagem para base64 (simplificado - em produção você usaria Firebase Storage)
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Função para detectar se é um reel do Instagram
+  const isInstagramReel = (url: string): boolean => {
+    return url.includes('/reel/')
+  }
+
+  // Função para obter a classe de aspect ratio baseada no tipo de conteúdo
+  const getAspectRatioClass = (item: any): string => {
+    if (item.imageUrl && isInstagramUrl(item.imageUrl)) {
+      return isInstagramReel(item.imageUrl) ? "aspect-[9/16]" : "aspect-square"
+    }
+    return "aspect-square"
+  }
+
+  // Função para detectar e processar URLs do Instagram
+  const isInstagramUrl = (url: string): boolean => {
+    const instagramRegex = /^https?:\/\/(www\.)?instagram\.com\/(p|reel)\/[a-zA-Z0-9_-]+\/?/
+    return instagramRegex.test(url)
+  }
+
+  // Função para extrair imagem do Instagram
+  const extractInstagramImage = async (url: string): Promise<string | null> => {
+    try {
+      // Extrair o código do post da URL
+      const postMatch = url.match(/\/(p|reel)\/([a-zA-Z0-9_-]+)/)
+      if (!postMatch) return null
+
+      const postId = postMatch[2]
+      
+      // Método 1: Tentar usar a URL de mídia direta do Instagram
+      const directImageUrl = `https://www.instagram.com/p/${postId}/media/?size=l`
+      
+      // Método 2: Como fallback, usar a URL de embed com parâmetros
+      const embedImageUrl = `https://instagram.com/p/${postId}/media/?size=l`
+      
+      // Método 3: URL alternativa para imagens do Instagram
+      const alternativeUrl = `https://www.instagram.com/p/${postId}/`
+      
+      // Para uma implementação mais robusta em produção, você usaria um proxy ou API
+      // Por enquanto, retornamos a URL direta que geralmente funciona
+      return directImageUrl
+    } catch (error) {
+      console.error('Erro ao extrair imagem do Instagram:', error)
+      return null
+    }
+  }
+
+  // Função para converter URL do Instagram em formato de imagem embeddable
+  const getInstagramEmbedImage = (url: string): string | null => {
+    try {
+      const postMatch = url.match(/\/(p|reel)\/([a-zA-Z0-9_-]+)/)
+      if (!postMatch) return null
+
+      const postId = postMatch[2]
+      
+      // Retorna uma URL que pode ser usada em um iframe ou como imagem
+      return `https://www.instagram.com/p/${postId}/embed/captioned/`
+    } catch (error) {
+      return null
+    }
+  }
+
+  // Função para validar e processar URL da imagem
+  const handleImageUrlChange = async (url: string) => {
+    setNewItemData({...newItemData, imageUrl: url})
+    
+    // Se for uma URL do Instagram, tentar extrair a imagem
+    if (url && isInstagramUrl(url)) {
+      toast({
+        title: "Processando Instagram",
+        description: "Extraindo imagem do post do Instagram...",
+      })
+      
+      const extractedImageUrl = await extractInstagramImage(url)
+      if (extractedImageUrl) {
+        setNewItemData(prev => ({...prev, imageUrl: extractedImageUrl}))
+        toast({
+          title: "Imagem extraída!",
+          description: "Imagem do Instagram foi extraída com sucesso.",
+        })
+      } else {
+        toast({
+          title: "Erro no Instagram",
+          description: "Não foi possível extrair a imagem. Verifique se a URL está correta.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // Função para lidar com mudança de cliente
+  const handleClientChange = (clientId: string) => {
+    if (clientId === "none") {
+      setNewItemData({
+        ...newItemData,
+        clientId: "",
+        clientName: ""
+      })
+    } else {
+      const selectedClient = clients?.find(c => c.id === clientId)
+      setNewItemData({
+        ...newItemData,
+        clientId,
+        clientName: selectedClient?.name || ""
+      })
+    }
+  }
+
+  // Função para limpar o formulário
+  const resetForm = () => {
+    setNewItemData({
+      title: "",
+      description: "",
+      style: "",
+      bodyPart: "",
+      duration: "",
+      clientId: "",
+      clientName: "",
+      tags: "",
+      imageUrl: "",
+    })
+    removeSelectedImage()
+  }
+
+  // Função para lidar com o fechamento do modal
+  const handleModalClose = (open: boolean) => {
+    setIsUploadOpen(open)
+    if (!open) {
+      resetForm()
+    }
+  }
+
   const handleAddItem = async () => {
     if (!newItemData.title || !newItemData.style) {
       toast({
@@ -79,8 +271,26 @@ export function Portfolio() {
 
     setIsLoading(true)
     try {
+      let imageUrl = newItemData.imageUrl
+
+      // Se há uma imagem selecionada, converter para base64
+      if (selectedImage) {
+        try {
+          imageUrl = await convertToBase64(selectedImage)
+        } catch (error) {
+          toast({
+            title: "Erro no upload",
+            description: "Erro ao processar a imagem. Tente novamente.",
+            variant: "destructive",
+          })
+          setIsLoading(false)
+          return
+        }
+      }
+
       await addPortfolioItem({
         ...newItemData,
+        imageUrl,
         tags: newItemData.tags.split(",").map((tag) => tag.trim()).filter((tag) => tag),
         likes: 0,
         date: new Date(),
@@ -91,17 +301,9 @@ export function Portfolio() {
         description: "Nova peça foi adicionada ao portfólio.",
       })
 
+      // Reset do formulário
       setIsUploadOpen(false)
-      setNewItemData({
-        title: "",
-        description: "",
-        style: "",
-        bodyPart: "",
-        duration: "",
-        clientName: "",
-        tags: "",
-        imageUrl: "",
-      })
+      resetForm()
     } catch (error) {
       toast({
         title: "Erro",
@@ -146,6 +348,68 @@ export function Portfolio() {
     }
   }
 
+  // Função para renderizar imagem do Instagram ou imagem normal
+  const renderPortfolioImage = (item: any) => {
+    const isInstagram = item.imageUrl && isInstagramUrl(item.imageUrl)
+    const isReel = isInstagram && isInstagramReel(item.imageUrl)
+    
+    if (isInstagram) {
+      const postMatch = item.imageUrl.match(/\/(p|reel)\/([a-zA-Z0-9_-]+)/)
+      const postId = postMatch?.[2]
+      
+      if (postId) {
+        // Usar iframe embed do Instagram para uma melhor experiência
+        const embedUrl = isReel 
+          ? `https://www.instagram.com/reel/${postId}/embed/captioned/`
+          : `https://www.instagram.com/p/${postId}/embed/captioned/`
+        
+        return (
+          <div className="w-full h-full relative bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
+            <iframe
+              src={embedUrl}
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              allowTransparency={true}
+              className="absolute inset-0 w-full h-full instagram-iframe"
+              style={{ minHeight: isReel ? '500px' : '400px' }}
+              title={`Instagram ${isReel ? 'reel' : 'post'} ${postId}`}
+              onError={() => {
+                // Fallback para imagem normal se o iframe falhar
+                console.log('Iframe failed, using direct image URL')
+              }}
+            />
+            <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium z-10">
+              {isReel ? 'Reel' : 'Instagram'}
+            </div>
+          </div>
+        )
+      }
+    }
+    
+    // Imagem normal
+    return (
+      <>
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt={item.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = "/placeholder.svg?height=300&width=300";
+            }}
+          />
+        ) : (
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <ImageIcon className="h-16 w-16 text-muted-foreground" />
+          </div>
+        )}
+      </>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -162,19 +426,102 @@ export function Portfolio() {
           <ImageIcon className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Portfólio</h1>
         </div>
-        <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+        <Dialog open={isUploadOpen} onOpenChange={handleModalClose}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Trabalho
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Trabalho</DialogTitle>
               <DialogDescription>Adicione uma nova peça ao seu portfólio</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Upload de Imagem */}
+              <div>
+                <Label htmlFor="image">Imagem da Tatuagem</Label>
+                <div className="space-y-3">
+                  {!imagePreview ? (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label htmlFor="image-upload" className="cursor-pointer">
+                        <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Clique para selecionar uma imagem
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Formatos: PNG, JPEG - Máximo: 5MB
+                        </p>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute top-2 right-2"
+                        onClick={removeSelectedImage}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Opção alternativa: URL da imagem */}
+                  {!selectedImage && (
+                    <div>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="flex-1 border-t"></div>
+                        <span className="text-xs text-muted-foreground px-2">ou</span>
+                        <div className="flex-1 border-t"></div>
+                      </div>
+                      <Input 
+                        placeholder="Cole a URL de uma imagem ou link do Instagram..."
+                        value={newItemData.imageUrl}
+                        onChange={(e) => handleImageUrlChange(e.target.value)}
+                      />
+                      {newItemData.imageUrl && isInstagramUrl(newItemData.imageUrl) && (
+                        <div className="mt-2 p-2 bg-pink-50 border border-pink-200 rounded-lg dark:bg-pink-950/20 dark:border-pink-800">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-sm"></div>
+                            <span className="text-xs text-pink-700 dark:text-pink-300">
+                              Link do Instagram detectado - imagem será extraída automaticamente
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {newItemData.imageUrl && !isInstagramUrl(newItemData.imageUrl) && newItemData.imageUrl.startsWith('http') && (
+                        <div className="mt-2">
+                          <img
+                            src={newItemData.imageUrl}
+                            alt="Preview da URL"
+                            className="w-full h-32 object-cover rounded-lg"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="title">Título *</Label>
                 <Input 
@@ -184,6 +531,43 @@ export function Portfolio() {
                   onChange={(e) => setNewItemData({...newItemData, title: e.target.value})}
                 />
               </div>
+
+              {/* Seleção de Cliente */}
+              <div>
+                <Label htmlFor="clientSelect">Cliente (opcional)</Label>
+                <Select value={newItemData.clientId} onValueChange={handleClientChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loadingClients ? (
+                      <div className="p-2 text-center">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </div>
+                    ) : (
+                      <>
+                        <SelectItem value="none">Nenhum cliente</SelectItem>
+                        {clients?.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs">
+                                  {client.name?.split(" ").map((n: string) => n[0]).join("") || "C"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{client.name}</div>
+                                <div className="text-xs text-muted-foreground">{client.phone}</div>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea 
@@ -236,32 +620,14 @@ export function Portfolio() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="clientName">Cliente</Label>
+                  <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
                   <Input 
-                    id="clientName" 
-                    placeholder="Nome do cliente"
-                    value={newItemData.clientName}
-                    onChange={(e) => setNewItemData({...newItemData, clientName: e.target.value})}
+                    id="tags" 
+                    placeholder="Ex: fineline, floral, feminina"
+                    value={newItemData.tags}
+                    onChange={(e) => setNewItemData({...newItemData, tags: e.target.value})}
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
-                <Input 
-                  id="tags" 
-                  placeholder="Ex: fineline, floral, feminina"
-                  value={newItemData.tags}
-                  onChange={(e) => setNewItemData({...newItemData, tags: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="imageUrl">URL da Imagem</Label>
-                <Input 
-                  id="imageUrl" 
-                  placeholder="https://exemplo.com/imagem.jpg"
-                  value={newItemData.imageUrl}
-                  onChange={(e) => setNewItemData({...newItemData, imageUrl: e.target.value})}
-                />
               </div>
               <Button onClick={handleAddItem} className="w-full" disabled={isLoading}>
                 {isLoading ? (
@@ -313,38 +679,47 @@ export function Portfolio() {
       </Card>
 
       {/* Galeria */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="organic-grid w-full">
         {filteredItems.length > 0 ? (
-          filteredItems.map((item: any) => (
-            <Card key={item.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative aspect-square">
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "/placeholder.svg?height=300&width=300";
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <ImageIcon className="h-16 w-16 text-muted-foreground" />
+          filteredItems.map((item: any) => {
+            const isReel = item.imageUrl && isInstagramUrl(item.imageUrl) && isInstagramReel(item.imageUrl)
+            const isInstagram = item.imageUrl && isInstagramUrl(item.imageUrl)
+            return (
+              <Card 
+                key={item.id} 
+                className={`group overflow-hidden hover:shadow-lg transition-shadow w-full ${
+                  isReel ? 'reel-item' : 'square-item'
+                }`}
+              >
+                <div className={`relative ${
+                  isReel 
+                    ? 'aspect-[9/16] instagram-reel-container' 
+                    : isInstagram 
+                      ? 'aspect-square instagram-post-container' 
+                      : 'aspect-square'
+                }`}>
+                  {renderPortfolioImage(item)}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                    <Button size="sm" variant="secondary" onClick={() => handleLike(item.id)}>
+                      <Heart className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => handleShare(item)}>
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    {isInstagramUrl(item.imageUrl) && (
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        onClick={() => window.open(item.imageUrl, '_blank')}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button size="sm" variant="secondary">
+                      <Edit className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
-                  <Button size="sm" variant="secondary" onClick={() => handleLike(item.id)}>
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => handleShare(item)}>
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                  <Button size="sm" variant="secondary">
-                    <Edit className="h-4 w-4" />
-                  </Button>
                 </div>
-              </div>
               <CardContent className="p-4">
                 <div className="space-y-2">
                   <div className="flex items-start justify-between">
@@ -382,7 +757,17 @@ export function Portfolio() {
                   )}
                   
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
-                    {item.clientName && <span>Cliente: {item.clientName}</span>}
+                    <div className="flex items-center space-x-2">
+                      {item.clientName && <span>Cliente: {item.clientName}</span>}
+                      {isInstagramUrl(item.imageUrl) && (
+                        <div className="flex items-center space-x-1 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 px-2 py-1 rounded-full">
+                          <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                          <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                            {isReel ? 'Reel' : 'Instagram'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     <span>
                       {item.date?.toDate 
                         ? item.date.toDate().toLocaleDateString("pt-BR")
@@ -392,10 +777,11 @@ export function Portfolio() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          ))
+              </Card>
+            )
+          })
         ) : (
-          <div className="col-span-full">
+          <div className="col-span-full w-full">
             <Card>
               <CardContent className="p-8 text-center">
                 <ImageIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />

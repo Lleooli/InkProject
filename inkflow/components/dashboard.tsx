@@ -5,6 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Calendar,
   DollarSign,
@@ -18,15 +22,34 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react"
-import { useAppointments, useClients, useInventory, usePayments } from "@/lib/firebase-hooks-user"
+import { useAppointments, useClients, useInventory, usePayments, useQuotes } from "@/lib/firebase-hooks-user"
 import { format, isToday, isTomorrow, startOfDay, endOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 export function Dashboard() {
-  const { appointments, loading: loadingAppointments } = useAppointments()
+  const { userProfile } = useAuth()
+  const { appointments, loading: loadingAppointments, addAppointment } = useAppointments()
   const { clients, loading: loadingClients } = useClients()
   const { stockItems: inventory, loading: loadingInventory } = useInventory()
   const { payments, loading: loadingPayments } = usePayments()
+  const { quotes, loading: loadingQuotes } = useQuotes()
+  
+  const { toast } = useToast()
+  
+  // Estados para o modal de novo agendamento
+  const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false)
+  const [isLoadingAppointment, setIsLoadingAppointment] = useState(false)
+  const [appointmentFormData, setAppointmentFormData] = useState({
+    clientId: "",
+    quoteId: "",
+    date: "",
+    time: "",
+    duration: "2",
+    type: "tatuagem",
+    notes: "",
+  })
   
   const [stats, setStats] = useState({
     todayEarnings: 0,
@@ -62,6 +85,156 @@ export function Dashboard() {
 
   // Alertas de estoque baixo
   const lowStockItems = inventory?.filter((item: any) => item.quantity <= item.minimumStock) || []
+
+  // Função para gerar mensagens dinâmicas de boas vindas
+  const getWelcomeMessage = () => {
+    const currentHour = new Date().getHours()
+    const userName = userProfile?.name?.split(" ")[0] || "Artista"
+    const studioName = userProfile?.studio
+    
+    let greeting = ""
+    let motivationalMessage = ""
+    let contextualMessage = ""
+    let gradientClass = ""
+    
+    // Definir saudação e gradiente baseado na hora
+    if (currentHour < 12) {
+      greeting = "Bom dia"
+      gradientClass = "from-amber-500 to-orange-500" // Gradiente matinal
+    } else if (currentHour < 18) {
+      greeting = "Boa tarde"
+      gradientClass = "from-blue-500 to-purple-500" // Gradiente vespertino
+    } else {
+      greeting = "Boa noite"
+      gradientClass = "from-purple-600 to-indigo-600" // Gradiente noturno
+    }
+
+    // Mensagens contextuais baseadas nas estatísticas
+    if (stats.todayAppointments > 0) {
+      contextualMessage = `Você tem ${stats.todayAppointments} ${stats.todayAppointments === 1 ? 'agendamento' : 'agendamentos'} hoje. `
+    } else {
+      contextualMessage = "Nenhum agendamento para hoje. "
+    }
+
+    if (stats.todayEarnings > 0) {
+      contextualMessage += `Já faturou ${formatCurrency(stats.todayEarnings)} hoje! 💰`
+    } else if (stats.todayAppointments > 0) {
+      contextualMessage += "Vamos fazer este dia render! 🚀"
+    } else {
+      contextualMessage += "Que tal capturar novos clientes? 📈"
+    }
+
+    // Mensagens motivacionais variadas para quando não há contexto específico
+    const motivationalMessages = [
+      "Que seu dia seja cheio de arte e inspiração! 🎨",
+      "Pronto para criar obras-primas hoje? ✨",
+      "Cada tatuagem é uma história única. Vamos escrever mais algumas hoje! 📖",
+      "A arte flui através de você. Tenha um dia incrível! 🌟",
+      "Transforme pele em tela e sonhos em realidade! 💫",
+      "Seu talento ilumina o dia de cada cliente. Brilhe hoje! ⭐",
+      "Mais um dia para deixar sua marca no mundo! 🖌️",
+      "A criatividade não tem limites. Explore hoje! 🚀"
+    ]
+
+    // Se não há contexto específico, usar mensagem motivacional
+    if (!contextualMessage || (stats.todayAppointments === 0 && stats.todayEarnings === 0)) {
+      const dayIndex = new Date().getDay()
+      motivationalMessage = motivationalMessages[dayIndex]
+    } else {
+      motivationalMessage = contextualMessage
+    }
+
+    // Montar a mensagem final
+    let welcomeText = `${greeting}, ${userName}!`
+    if (studioName) {
+      welcomeText += ` Bem-vindo ao ${studioName}.`
+    }
+    
+    return {
+      greeting: welcomeText,
+      motivation: motivationalMessage,
+      gradient: gradientClass
+    }
+  }
+
+  // Filtrar orçamentos por cliente selecionado
+  const selectedClientQuotes = quotes?.filter((quote) => 
+    quote.clientId === appointmentFormData.clientId && quote.status === "pendente"
+  ) || []
+
+  const handleNewAppointment = () => {
+    const message = encodeURIComponent(`Olá! Gostaria de marcar uma tatuagem.
+
+📝 *Informações necessárias:*
+• Ideia da tatuagem: [descreva sua ideia]
+• Tamanho aproximado: [ex: 10cm x 15cm]
+• Local do corpo: [onde será feita]
+• Preferência de data: [quando gostaria]
+• Estilo desejado: [fineline, colorida, realismo, etc.]
+
+Responda com essas informações para eu preparar seu orçamento! 🎨`)
+
+    window.open(`https://wa.me/?text=${message}`, "_blank")
+  }
+
+  const handleCreateAppointment = async () => {
+    if (!appointmentFormData.clientId || !appointmentFormData.date || !appointmentFormData.time) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Cliente, data e horário são obrigatórios.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const selectedClient = clients?.find(c => c.id === appointmentFormData.clientId)
+    const selectedQuote = quotes?.find(q => q.id === appointmentFormData.quoteId)
+
+    setIsLoadingAppointment(true)
+    try {
+      const appointmentDate = new Date(`${appointmentFormData.date}T${appointmentFormData.time}`)
+      
+      const appointmentData = {
+        clientId: appointmentFormData.clientId,
+        clientName: selectedClient?.name || "",
+        clientPhone: selectedClient?.phone || "",
+        quoteId: appointmentFormData.quoteId || null,
+        date: appointmentDate,
+        duration: Number(appointmentFormData.duration),
+        type: appointmentFormData.type,
+        notes: appointmentFormData.notes,
+        status: "confirmado",
+        estimatedValue: selectedQuote?.finalPrice || 0,
+        createdAt: new Date(),
+      }
+
+      await addAppointment(appointmentData)
+
+      toast({
+        title: "Agendamento criado!",
+        description: `Agendamento para ${selectedClient?.name} criado com sucesso.`,
+      })
+
+      setIsNewAppointmentOpen(false)
+      setAppointmentFormData({
+        clientId: "",
+        quoteId: "",
+        date: "",
+        time: "",
+        duration: "2",
+        type: "tatuagem",
+        notes: "",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar agendamento. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingAppointment(false)
+    }
+  }
 
   // Calcular estatísticas
   useEffect(() => {
@@ -123,6 +296,9 @@ export function Dashboard() {
     })
   }, [appointments, clients, payments, loadingAppointments, loadingClients, loadingPayments])
 
+  // Gerar mensagem de boas vindas após calcular as estatísticas
+  const welcomeMessage = getWelcomeMessage()
+
   const trendingNews = [
     {
       title: "Novas Técnicas de Fineline em Alta",
@@ -167,7 +343,7 @@ export function Dashboard() {
     return format(dateObj, "HH:mm", { locale: ptBR })
   }
 
-  if (loadingAppointments || loadingClients || loadingPayments || loadingInventory) {
+  if (loadingAppointments || loadingClients || loadingPayments || loadingInventory || !userProfile) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -178,6 +354,47 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header com botões de ação */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <TrendingUp className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={handleNewAppointment}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            WhatsApp
+          </Button>
+          <Button onClick={() => setIsNewAppointmentOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Agendamento
+          </Button>
+        </div>
+      </div>
+
+      {/* Mensagem de Boas Vindas */}
+      <Card className={`bg-gradient-to-r ${welcomeMessage.gradient} text-white border-0 shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-[1.01]`}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold mb-2 animate-in slide-in-from-left duration-500">{welcomeMessage.greeting}</h2>
+              <p className="text-white/90 opacity-90 animate-in slide-in-from-left duration-700">{welcomeMessage.motivation}</p>
+              {userProfile?.studio && (
+                <div className="mt-3 flex items-center space-x-2 text-white/80 animate-in slide-in-from-left duration-900">
+                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">{userProfile.studio}</span>
+                </div>
+              )}
+            </div>
+            <div className="hidden md:block ml-4 animate-in slide-in-from-right duration-700">
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-white/30 transition-colors duration-300">
+                <TrendingUp className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -296,7 +513,7 @@ export function Dashboard() {
                 <CardTitle>Próximos Agendamentos</CardTitle>
                 <CardDescription>Seus compromissos para hoje e amanhã</CardDescription>
               </div>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setIsNewAppointmentOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Agendamento
               </Button>
@@ -414,6 +631,181 @@ export function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Novo Agendamento */}
+      <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Agendamento</DialogTitle>
+            <DialogDescription>
+              Selecione um cliente e vincule um orçamento ao agendamento
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Seleção de Cliente */}
+            <div>
+              <Label htmlFor="clientSelect">Cliente *</Label>
+              <Select 
+                value={appointmentFormData.clientId} 
+                onValueChange={(value) => setAppointmentFormData({ ...appointmentFormData, clientId: value, quoteId: "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingClients ? (
+                    <div className="p-2 text-center">
+                      <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                    </div>
+                  ) : (
+                    clients?.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {client.name?.split(" ").map((n: string) => n[0]).join("") || "C"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{client.name}</div>
+                            <div className="text-xs text-muted-foreground">{client.phone}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Seleção de Orçamento */}
+            {appointmentFormData.clientId && (
+              <div>
+                <Label htmlFor="quoteSelect">Orçamento (opcional)</Label>
+                <Select 
+                  value={appointmentFormData.quoteId} 
+                  onValueChange={(value) => setAppointmentFormData({ ...appointmentFormData, quoteId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um orçamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loadingQuotes ? (
+                      <div className="p-2 text-center">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                      </div>
+                    ) : selectedClientQuotes.length === 0 ? (
+                      <div className="p-2 text-center text-muted-foreground text-sm">
+                        Nenhum orçamento pendente para este cliente
+                      </div>
+                    ) : (
+                      selectedClientQuotes.map((quote) => (
+                        <SelectItem key={quote.id} value={quote.id}>
+                          <div>
+                            <div className="font-medium">{quote.description}</div>
+                            <div className="text-xs text-muted-foreground">
+                              R$ {quote.finalPrice?.toFixed(2) || "0,00"} - {quote.estimatedHours}h
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Data e Horário */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="date">Data *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={appointmentFormData.date}
+                  onChange={(e) => setAppointmentFormData({ ...appointmentFormData, date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="time">Horário *</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={appointmentFormData.time}
+                  onChange={(e) => setAppointmentFormData({ ...appointmentFormData, time: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* Duração e Tipo */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="duration">Duração (horas)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  value={appointmentFormData.duration}
+                  onChange={(e) => setAppointmentFormData({ ...appointmentFormData, duration: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="type">Tipo</Label>
+                <Select 
+                  value={appointmentFormData.type} 
+                  onValueChange={(value) => setAppointmentFormData({ ...appointmentFormData, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tatuagem">Tatuagem</SelectItem>
+                    <SelectItem value="consulta">Consulta</SelectItem>
+                    <SelectItem value="retoque">Retoque</SelectItem>
+                    <SelectItem value="orcamento">Orçamento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Observações */}
+            <div>
+              <Label htmlFor="notes">Observações</Label>
+              <Input
+                id="notes"
+                placeholder="Observações sobre o agendamento..."
+                value={appointmentFormData.notes}
+                onChange={(e) => setAppointmentFormData({ ...appointmentFormData, notes: e.target.value })}
+              />
+            </div>
+
+            {/* Botões */}
+            <div className="flex space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsNewAppointmentOpen(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCreateAppointment} 
+                disabled={isLoadingAppointment} 
+                className="flex-1"
+              >
+                {isLoadingAppointment ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Agendar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

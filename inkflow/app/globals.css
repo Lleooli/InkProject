@@ -5,6 +5,68 @@
 /* Importar fonte característica para tattoo studios */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* Estilos customizados para grid orgânica do portfólio */
+@layer utilities {
+  .portfolio-masonry {
+    column-fill: balance;
+  }
+  
+  .portfolio-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 1.5rem;
+  }
+  
+  .instagram-reel-container {
+    min-height: 500px;
+    max-height: 700px;
+  }
+  
+  .instagram-post-container {
+    min-height: 300px;
+    max-height: 400px;
+  }
+  
+  .instagram-iframe {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: none;
+    background: transparent;
+  }
+  
+  /* Grid orgânica responsiva */
+  .organic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-auto-rows: minmax(200px, auto);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  
+  .organic-grid .reel-item {
+    grid-row-end: span 2;
+  }
+  
+  .organic-grid .square-item {
+    grid-row-end: span 1;
+  }
+  
+  @media (min-width: 768px) {
+    .organic-grid {
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .organic-grid {
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+  }
+}
+
 @layer base {
   :root {
     /* Paleta Tattoo Studio - Preto, Dourado e Cinza */

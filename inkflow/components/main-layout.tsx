@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Logo } from "@/components/ui/logo"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -68,8 +69,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     { name: "Estoque", href: "/estoque", icon: Package },
     { name: "Cupons", href: "/cupons", icon: Ticket },
     { name: "Configurações", href: "/configuracoes", icon: Settings },
-    // Temporário - para inicialização do Firestore
-    { name: "Inicializar DB", href: "/init-firestore", icon: Settings },
   ]
 
   const getPageTitle = () => {
@@ -100,7 +99,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
         <div className="fixed left-0 top-0 h-full w-64 bg-card border-r">
           <div className="flex items-center justify-between p-4 border-b">
-            <h1 className="text-xl font-bold text-primary">InkFlow</h1>
+            <Logo size="md" />
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
             </Button>
@@ -129,7 +128,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <Card className="flex flex-col flex-1 min-h-0 border-r rounded-none">
           <div className="flex items-center h-16 px-4 border-b">
-            <h1 className="text-xl font-bold text-primary">InkFlow</h1>
+            <Logo size="md" />
           </div>
           <nav className="flex-1 p-4 space-y-2">
             {navigation.map((item) => {
@@ -156,6 +155,12 @@ export function MainLayout({ children }: MainLayoutProps) {
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
+          
+          {/* Logo no header mobile */}
+          <div className="lg:hidden">
+            <Logo size="sm" />
+          </div>
+
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <h2 className="text-lg font-semibold">{getPageTitle()}</h2>

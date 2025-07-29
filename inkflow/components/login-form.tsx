@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/components/ui/logo"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
@@ -39,8 +40,8 @@ export function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-20 h-20 bg-primary rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-primary-foreground">🎨</span>
+          <div className="mx-auto w-20 h-20 bg-primary rounded-full flex items-center justify-center p-4">
+            <Logo size="lg" showText={false} />
           </div>
           <div>
             <CardTitle className="text-3xl font-bold text-primary">InkFlow</CardTitle>
