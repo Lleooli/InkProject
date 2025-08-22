@@ -44,6 +44,7 @@ import {
   Shield,
   Smartphone,
   Ticket,
+  MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
@@ -65,6 +66,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { name: "Calculadora", href: "/calculadora", icon: Calculator },
     { name: "Portfólio", href: "/portfolio", icon: ImageIcon },
     { name: "Tendências", href: "/tendencias", icon: TrendingUp },
+    { name: "Networking", href: "/networking", icon: MessageCircle },
     { name: "Clientes", href: "/clientes", icon: Users },
     { name: "Estoque", href: "/estoque", icon: Package },
     { name: "Cupons", href: "/cupons", icon: Ticket },

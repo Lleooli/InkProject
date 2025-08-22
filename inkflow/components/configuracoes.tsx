@@ -17,11 +17,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Settings, User, Bell, Calculator, MessageSquare, Shield, Download, Upload, Plus, Trash2, Edit, RotateCcw, Info } from "lucide-react"
+import { Settings, User, Bell, Calculator, MessageSquare, Shield, Download, Upload, Plus, Trash2, Edit, RotateCcw, Info, MessageCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { ActiveSessions } from "@/components/active-sessions"
 import { QRCodeDisplay } from "@/components/qr-code-display"
+import { EmailTestComponent } from "@/components/email-test"
 import { useCalculatorConfig, ComplexityOption, BodyPartOption } from "@/contexts/calculator-config-context"
 import { NumericFormat } from 'react-number-format'
 
@@ -117,6 +118,12 @@ export function Configuracoes() {
     bio: "Tatuador especializado em realismo e fineline com 8 anos de experiência.",
     instagram: "@joaosilva_tattoo",
     website: "www.joaosilvatattoo.com",
+    allowPrivateMessages: true,
+    specialties: ["Realismo", "Fineline", "Blackwork"],
+    publicProfile: true,
+    showPortfolio: true,
+    networkingNotifications: true,
+    emailNotifications: true,
   })
 
   const [notifications, setNotifications] = useState({
@@ -325,6 +332,7 @@ Agendamento pelo WhatsApp! 📱`,
         <div className="flex justify-center">
           <TabsList className="flex flex-wrap justify-center gap-1 w-fit max-w-full h-auto p-1">
             <TabsTrigger value="perfil" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[80px]">Perfil</TabsTrigger>
+            <TabsTrigger value="networking" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[100px]">Networking</TabsTrigger>
             <TabsTrigger value="seguranca" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[80px] hidden xs:flex">Segurança</TabsTrigger>
             <TabsTrigger value="notificacoes" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[100px] hidden lg:flex">Notificações</TabsTrigger>
             <TabsTrigger value="calculadora" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[100px]">Calculadora</TabsTrigger>
@@ -438,6 +446,170 @@ Agendamento pelo WhatsApp! 📱`,
               <Button onClick={handleSaveProfile}>Salvar Alterações</Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="networking" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageCircle className="h-5 w-5" />
+                <span>Configurações de Networking</span>
+              </CardTitle>
+              <CardDescription>
+                Configure suas preferências de comunicação e networking
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Permitir mensagens privadas</Label>
+                    <div className="text-sm text-muted-foreground">
+                      Outros tatuadores poderão enviar mensagens privadas para você
+                    </div>
+                  </div>
+                  <Switch
+                    checked={profile.allowPrivateMessages ?? true}
+                    onCheckedChange={(checked) =>
+                      setProfile(prev => ({ ...prev, allowPrivateMessages: checked }))
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio/Apresentação</Label>
+                    <Textarea
+                      id="bio"
+                      placeholder="Conte um pouco sobre você, sua experiência e especialidades..."
+                      value={profile.bio || ""}
+                      onChange={(e) =>
+                        setProfile(prev => ({ ...prev, bio: e.target.value }))
+                      }
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="specialties">Especialidades</Label>
+                    <Textarea
+                      id="specialties"
+                      placeholder="Ex: Realismo, Old School, Blackwork, Aquarela..."
+                      value={profile.specialties?.join(", ") || ""}
+                      onChange={(e) => {
+                        const specialties = e.target.value
+                          .split(",")
+                          .map(s => s.trim())
+                          .filter(s => s.length > 0)
+                        setProfile(prev => ({ ...prev, specialties }))
+                      }}
+                      className="min-h-[100px]"
+                    />
+                    <div className="text-sm text-muted-foreground">
+                      Separe as especialidades por vírgula
+                    </div>
+                  </div>
+                </div>
+
+                {profile.specialties && profile.specialties.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Preview das especialidades:</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.specialties.map((specialty, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-sm"
+                        >
+                          {specialty}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-4">
+                  <Button onClick={handleSaveProfile}>
+                    Salvar Configurações
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Shield className="h-5 w-5" />
+                <span>Privacidade</span>
+              </CardTitle>
+              <CardDescription>
+                Configure quem pode ver e interagir com seu perfil
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Perfil público</Label>
+                  <div className="text-sm text-muted-foreground">
+                    Seu perfil será visível para outros usuários na aba Comunidade
+                  </div>
+                </div>
+                <Switch
+                  checked={profile.publicProfile ?? true}
+                  onCheckedChange={(checked) =>
+                    setProfile(prev => ({ ...prev, publicProfile: checked }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Mostrar trabalhos no perfil</Label>
+                  <div className="text-sm text-muted-foreground">
+                    Outros usuários poderão ver uma prévia do seu portfólio
+                  </div>
+                </div>
+                <Switch
+                  checked={profile.showPortfolio ?? true}
+                  onCheckedChange={(checked) =>
+                    setProfile(prev => ({ ...prev, showPortfolio: checked }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Receber notificações de networking</Label>
+                  <div className="text-sm text-muted-foreground">
+                    Ser notificado sobre novos posts, comentários e mensagens
+                  </div>
+                </div>
+                <Switch
+                  checked={profile.networkingNotifications ?? true}
+                  onCheckedChange={(checked) =>
+                    setProfile(prev => ({ ...prev, networkingNotifications: checked }))
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Notificações por email</Label>
+                  <div className="text-sm text-muted-foreground">
+                    Receber email quando alguém te enviar a primeira mensagem
+                  </div>
+                </div>
+                <Switch
+                  checked={profile.emailNotifications ?? true}
+                  onCheckedChange={(checked) =>
+                    setProfile(prev => ({ ...prev, emailNotifications: checked }))
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <EmailTestComponent />
         </TabsContent>
 
         <TabsContent value="seguranca" className="space-y-6">
