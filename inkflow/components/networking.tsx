@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -90,6 +90,7 @@ interface Message {
 export function Networking() {
   const { user, userProfile } = useAuth()
   const { toast } = useToast()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [newPostContent, setNewPostContent] = useState("")
@@ -100,6 +101,7 @@ export function Networking() {
   const [privateChats, setPrivateChats] = useState<PrivateMessage[]>([])
   const [activeChat, setActiveChat] = useState<PrivateMessage | null>(null)
   const [newMessage, setNewMessage] = useState("")
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
 
   // Carregar posts do feed
   useEffect(() => {
@@ -220,11 +222,26 @@ export function Networking() {
         id: doc.id,
         ...doc.data()
       })) as PrivateMessage[]
-      setPrivateChats(chatsData)
+      
+      // Atualizar apenas chats que não são o chat ativo ou que tiveram mudanças reais
+      setPrivateChats(prev => {
+        return chatsData.map(newChat => {
+          const existingChat = prev.find(c => c.id === newChat.id)
+          
+          // Se é o chat ativo e tem mais mensagens localmente, manter as mensagens locais
+          if (activeChat?.id === newChat.id && existingChat?.messages && newChat.messages) {
+            if (existingChat.messages.length > newChat.messages.length) {
+              return existingChat // Manter a versão local com mais mensagens
+            }
+          }
+          
+          return newChat // Usar a versão do Firestore
+        })
+      })
     })
 
     return () => unsubscribe()
-  }, [user])
+  }, [user, activeChat?.id])
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !user || !userProfile) return
@@ -332,7 +349,9 @@ export function Networking() {
   }
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user || !userProfile || !activeChat) return
+    if (!newMessage.trim() || !user || !userProfile || !activeChat || isSendingMessage) return
+
+    setIsSendingMessage(true)
 
     const message = {
       id: Date.now().toString(),
@@ -342,14 +361,70 @@ export function Networking() {
       createdAt: new Date()
     }
 
-    const chatRef = doc(db, "privateChats", activeChat.id)
-    await updateDoc(chatRef, {
-      messages: arrayUnion(message),
-      lastMessage: newMessage,
-      lastMessageAt: new Date()
+    // Atualizar imediatamente o estado local para feedback instantâneo
+    setActiveChat(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        messages: [...(prev.messages || []), message],
+        lastMessage: newMessage,
+        lastMessageAt: new Date()
+      }
     })
 
+    // Atualizar também a lista de chats privados
+    setPrivateChats(prev => prev.map(chat => 
+      chat.id === activeChat.id 
+        ? {
+            ...chat,
+            messages: [...(chat.messages || []), message],
+            lastMessage: newMessage,
+            lastMessageAt: new Date()
+          }
+        : chat
+    ))
+
+    // Limpar o campo de input imediatamente
+    const messageToSend = newMessage
     setNewMessage("")
+
+    // Atualizar o Firestore em background
+    try {
+      const chatRef = doc(db, "privateChats", activeChat.id)
+      await updateDoc(chatRef, {
+        messages: arrayUnion(message),
+        lastMessage: messageToSend,
+        lastMessageAt: new Date()
+      })
+    } catch (error) {
+      console.error("Erro ao salvar mensagem:", error)
+      
+      // Em caso de erro, reverter o estado local
+      setActiveChat(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          messages: (prev.messages || []).filter(m => m.id !== message.id)
+        }
+      })
+      
+      setPrivateChats(prev => prev.map(chat => 
+        chat.id === activeChat.id 
+          ? {
+              ...chat,
+              messages: (chat.messages || []).filter(m => m.id !== message.id)
+            }
+          : chat
+      ))
+      
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSendingMessage(false)
+    }
   }
 
   const filteredUsers = users.filter(user => 
@@ -363,6 +438,18 @@ export function Networking() {
     const otherUserId = chat.participants.find(id => id !== user.uid)
     return users.find(u => u.id === otherUserId) || null
   }
+
+  // Função para rolar para a última mensagem
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  // Rolar para baixo quando o chat ativo mudar ou novas mensagens chegarem
+  useEffect(() => {
+    if (activeChat && activeChat.messages?.length > 0) {
+      setTimeout(scrollToBottom, 100) // Pequeno delay para garantir que o DOM foi atualizado
+    }
+  }, [activeChat?.id, activeChat?.messages?.length])
 
   return (
     <div className="space-y-6">
@@ -716,6 +803,8 @@ export function Networking() {
                           <p className="text-sm">Seja o primeiro a enviar uma mensagem!</p>
                         </div>
                       )}
+                      {/* Referência para scroll automático */}
+                      <div ref={messagesEndRef} />
                     </div>
                     <div className="border-t p-4">
                       <div className="flex gap-2">
@@ -731,9 +820,13 @@ export function Networking() {
                         />
                         <Button 
                           onClick={handleSendMessage}
-                          disabled={!newMessage.trim()}
+                          disabled={!newMessage.trim() || isSendingMessage}
                         >
-                          <Send className="w-4 h-4" />
+                          {isSendingMessage ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
                     </div>
