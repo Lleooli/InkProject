@@ -6,76 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingUp, Search, ExternalLink, Bookmark, Share2, Clock, Eye } from "lucide-react"
+import { TrendingUp, Search, ExternalLink, Bookmark, Share2, Clock, Eye, RefreshCw, Sparkles } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useTendencias } from "@/hooks/use-tendencias"
 
 export function Tendencias() {
   const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
+  const { tendencias, loading, error, refreshTendencias, isRefreshing } = useTendencias()
 
-  const trendingNews = [
-    {
-      id: 1,
-      title: "Fineline Tattoos: A Arte da Delicadeza em 2024",
-      excerpt:
-        "As tatuagens fineline continuam dominando as tendências, com técnicas cada vez mais refinadas e designs minimalistas que conquistam todos os públicos.",
-      image: "/placeholder.svg?height=200&width=300",
-      source: "Tattoo Magazine",
-      author: "Marina Santos",
-      publishedAt: "2024-01-20T10:00:00Z",
-      readTime: "5 min",
-      category: "Tendências",
-      tags: ["fineline", "minimalismo", "técnicas"],
-      views: 1250,
-      url: "#",
-    },
-    {
-      id: 2,
-      title: "Cores Neon: O Futuro Brilhante das Tatuagens",
-      excerpt:
-        "Tintas neon e UV estão revolucionando o mundo da tatuagem, criando efeitos únicos que brilham sob luz negra e chamam atenção durante o dia.",
-      image: "/placeholder.svg?height=200&width=300",
-      source: "Ink World",
-      author: "Carlos Mendoza",
-      publishedAt: "2024-01-18T14:30:00Z",
-      readTime: "7 min",
-      category: "Inovação",
-      tags: ["neon", "uv", "cores", "inovação"],
-      views: 890,
-      url: "#",
-    },
-    {
-      id: 3,
-      title: "Cuidados Pós-Tatuagem: Guia Completo 2024",
-      excerpt:
-        "Novos produtos e técnicas de cicatrização estão mudando a forma como cuidamos das tatuagens recém-feitas, garantindo melhor resultado final.",
-      image: "/placeholder.svg?height=200&width=300",
-      source: "Tattoo Care",
-      author: "Dra. Ana Ferreira",
-      publishedAt: "2024-01-15T09:15:00Z",
-      readTime: "10 min",
-      category: "Cuidados",
-      tags: ["cuidados", "cicatrização", "produtos"],
-      views: 2100,
-      url: "#",
-    },
-    {
-      id: 4,
-      title: "Tatuagens Geométricas: Precisão e Simetria",
-      excerpt:
-        "O estilo geométrico ganha força com designs cada vez mais complexos, utilizando software especializado para criar padrões perfeitos.",
-      image: "/placeholder.svg?height=200&width=300",
-      source: "Geometric Ink",
-      author: "Pedro Oliveira",
-      publishedAt: "2024-01-12T16:45:00Z",
-      readTime: "6 min",
-      category: "Estilos",
-      tags: ["geometrico", "precisão", "software"],
-      views: 756,
-      url: "#",
-    },
-  ]
-
+  // Dados estáticos para tutoriais e artistas (mantidos como estavam)
   const tutorials = [
     {
       id: 1,
@@ -162,17 +102,48 @@ Fonte: ${item.source}
     })
   }
 
-  const filteredNews = trendingNews.filter(
+  const filteredNews = tendencias.filter(
     (item) =>
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
   )
 
+  const handleRefresh = async () => {
+    try {
+      await refreshTendencias()
+      toast({
+        title: "Conteúdo atualizado!",
+        description: "As tendências foram reorganizadas com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro ao atualizar:', error)
+      toast({
+        title: "Erro ao atualizar",
+        description: error instanceof Error ? error.message : "Não foi possível atualizar as tendências.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-2">
-        <TrendingUp className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Tendências</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <TrendingUp className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Tendências</h1>
+          <Badge variant="secondary" className="flex items-center space-x-1">
+            <span>Conteúdo Estático</span>
+          </Badge>
+        </div>
+        <Button 
+          onClick={handleRefresh} 
+          disabled={isRefreshing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Atualizando...' : 'Embaralhar'}
+        </Button>
       </div>
 
       {/* Busca */}
@@ -198,7 +169,54 @@ Fonte: ${item.source}
         </TabsList>
 
         <TabsContent value="noticias" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
+          {error && (
+            <Card className="border-destructive">
+              <CardContent className="p-4">
+                <p className="text-destructive">{error}</p>
+                <Button 
+                  onClick={handleRefresh} 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  disabled={isRefreshing}
+                >
+                  Tentar novamente
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          
+          {loading ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="w-full h-48 bg-muted animate-pulse" />
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div className="h-4 bg-muted rounded animate-pulse" />
+                      <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
+                      <div className="h-3 bg-muted rounded w-1/2 animate-pulse" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredNews.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm ? 'Nenhuma notícia encontrada para sua busca.' : 'Nenhuma tendência disponível no momento.'}
+                </p>
+                {!searchTerm && (
+                  <Button onClick={handleRefresh} disabled={isRefreshing}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Embaralhar Conteúdo
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
             {filteredNews.map((news) => (
               <Card key={news.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="relative">
@@ -206,6 +224,11 @@ Fonte: ${item.source}
                   <Badge className="absolute top-2 left-2" variant="secondary">
                     {news.category}
                   </Badge>
+                  {news.generatedBy === 'local' && (
+                    <Badge className="absolute top-2 right-2 bg-blue-500">
+                      Estático
+                    </Badge>
+                  )}
                 </div>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2 text-sm text-muted-foreground">
@@ -247,6 +270,7 @@ Fonte: ${item.source}
               </Card>
             ))}
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="tutoriais" className="space-y-6">

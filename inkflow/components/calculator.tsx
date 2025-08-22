@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Calculator, Share2, Save, Users, Plus, Loader2, Settings2, Ticket, Check } from "lucide-react"
+import { Calculator, Share2, Save, Users, Plus, Loader2, Settings2, Ticket, Check, Eye, Info } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useClients, useQuotes, useCoupons } from "@/lib/firebase-hooks-user"
 import { useCalculatorConfig } from "@/contexts/calculator-config-context"
@@ -49,6 +49,7 @@ export function TattooCalculator() {
   const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
   const [isNeedleSelectionOpen, setIsNeedleSelectionOpen] = useState(false)
   const [isLoadingClient, setIsLoadingClient] = useState(false)
+  const [isConfigViewOpen, setIsConfigViewOpen] = useState(false)
   
   // Estados para cupons
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
@@ -497,10 +498,121 @@ Agendamento pelo WhatsApp! 📱`
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-2">
-        <Calculator className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Calculadora de Tatuagem</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Calculator className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Calculadora de Tatuagem</h1>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsConfigViewOpen(!isConfigViewOpen)}
+          className="flex items-center space-x-2"
+        >
+          <Eye className="h-4 w-4" />
+          <span>{isConfigViewOpen ? 'Ocultar' : 'Ver'} Configurações</span>
+        </Button>
       </div>
+
+      {/* Painel de Configurações */}
+      {isConfigViewOpen && (
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-blue-700 dark:text-blue-300">
+              <Settings2 className="h-5 w-5" />
+              <span>Configurações Atuais</span>
+            </CardTitle>
+            <CardDescription className="text-blue-600 dark:text-blue-400">
+              Visualize as configurações definidas na aba de configurações
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Configurações Básicas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium text-blue-700 dark:text-blue-300">Valores Base</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Valor por hora:</span>
+                    <span className="font-medium">R$ {config.hourlyRate.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Margem de lucro:</span>
+                    <span className="font-medium">{config.profitMargin}%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="font-medium text-blue-700 dark:text-blue-300">Custos de Materiais</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Agulhas/cm²:</span>
+                    <span className="font-medium">R$ {config.materialCosts.needleCost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tintas/cm²:</span>
+                    <span className="font-medium">R$ {config.materialCosts.inkCost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Luvas/descartáveis:</span>
+                    <span className="font-medium">R$ {config.materialCosts.gloveCost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Filme/proteção/cm²:</span>
+                    <span className="font-medium">R$ {config.materialCosts.filmCost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Pomada/cuidados/cm²:</span>
+                    <span className="font-medium">R$ {config.materialCosts.ointmentCost.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Outros materiais:</span>
+                    <span className="font-medium">R$ {config.materialCosts.otherCosts.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tipos de Complexidade */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-blue-700 dark:text-blue-300">Tipos de Complexidade</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {config.complexityOptions.map((option) => (
+                  <div key={option.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <Badge variant="secondary" className="text-xs">x{option.multiplier}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Partes do Corpo */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-blue-700 dark:text-blue-300">Partes do Corpo</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {config.bodyPartOptions.map((option) => (
+                  <div key={option.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <Badge variant="secondary" className="text-xs">x{option.multiplier}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Informação adicional */}
+            <div className="flex items-start space-x-2 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-700 dark:text-blue-300">
+                <p className="font-medium">Como usar essas configurações:</p>
+                <p className="mt-1 text-blue-600 dark:text-blue-400">
+                  Estas configurações são aplicadas automaticamente nos cálculos. Para alterá-las, vá para a aba <strong>Configurações</strong>.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Formulário */}

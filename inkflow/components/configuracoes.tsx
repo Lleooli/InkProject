@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +21,78 @@ import { Settings, User, Bell, Calculator, MessageSquare, Shield, Download, Uplo
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { ActiveSessions } from "@/components/active-sessions"
+import { QRCodeDisplay } from "@/components/qr-code-display"
 import { useCalculatorConfig, ComplexityOption, BodyPartOption } from "@/contexts/calculator-config-context"
+import { NumericFormat } from 'react-number-format'
+
+// Componente customizado para campos monetários
+const CurrencyInput = ({ 
+  id, 
+  value, 
+  onChange, 
+  placeholder = "R$ 0,00" 
+}: { 
+  id: string
+  value: number
+  onChange: (value: number) => void
+  placeholder?: string 
+}) => (
+  <NumericFormat
+    id={id}
+    customInput={Input}
+    value={value}
+    onValueChange={(values) => {
+      onChange(values.floatValue || 0)
+    }}
+    thousandSeparator="."
+    decimalSeparator=","
+    prefix="R$ "
+    decimalScale={2}
+    fixedDecimalScale={true}
+    placeholder={placeholder}
+    allowNegative={false}
+    className="w-full"
+  />
+)
+
+// Funções para formatação de outras máscaras (mantidas para telefone, porcentagem, etc)
+const formatPhone = (value: string): string => {
+  const cleaned = value.replace(/\D/g, '')
+  
+  if (cleaned.length <= 2) {
+    return `+${cleaned}`
+  } else if (cleaned.length <= 4) {
+    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2)}`
+  } else if (cleaned.length <= 9) {
+    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4)}`
+  } else if (cleaned.length <= 11) {
+    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`
+  } else {
+    return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 9)}-${cleaned.slice(9, 13)}`
+  }
+}
+
+const parsePhone = (value: string): string => {
+  return value.replace(/\D/g, '')
+}
+
+const formatPercentage = (value: string | number): string => {
+  const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value
+  return `${numericValue}%`
+}
+
+const parsePercentage = (value: string): number => {
+  return parseFloat(value.replace('%', '')) || 0
+}
+
+const formatMultiplier = (value: string | number): string => {
+  const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value
+  return `${numericValue.toFixed(1)}x`
+}
+
+const parseMultiplier = (value: string): number => {
+  return parseFloat(value.replace('x', '')) || 0
+}
 
 export function Configuracoes() {
   const { user, userProfile } = useAuth()
@@ -75,6 +146,8 @@ export function Configuracoes() {
   })
 
   const [whatsapp, setWhatsapp] = useState({
+    phone: "+55 11 99999-9999",
+    botEnabled: false,
     appointmentTemplate: `Olá! Gostaria de marcar uma tatuagem.
 
 📝 *Informações necessárias:*
@@ -98,7 +171,31 @@ Responda com essas informações para eu preparar seu orçamento! 🎨`,
 Agendamento pelo WhatsApp! 📱`,
   })
 
+  const [botStatus, setBotStatus] = useState({
+    running: false,
+    loading: false,
+    showQR: false
+  })
+
   const { toast } = useToast()
+
+  // Verifica status do bot ao carregar
+  useEffect(() => {
+    const checkBotStatus = async () => {
+      try {
+        const response = await fetch('/api/whatsapp')
+        const result = await response.json()
+        setBotStatus(prev => ({ 
+          ...prev, 
+          running: result.running 
+        }))
+      } catch (error) {
+        console.error('Erro ao verificar status do bot:', error)
+      }
+    }
+    
+    checkBotStatus()
+  }, [])
 
   const handleSaveProfile = () => {
     toast({
@@ -114,11 +211,93 @@ Agendamento pelo WhatsApp! 📱`,
     })
   }
 
-  const handleSaveWhatsApp = () => {
+  const handleSaveWhatsApp = async () => {
     toast({
       title: "Templates atualizados!",
       description: "Os templates do WhatsApp foram salvos.",
     })
+
+    // Se o bot está rodando, atualiza as configurações
+    if (botStatus.running) {
+      try {
+        const response = await fetch('/api/whatsapp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update-config',
+            config: {
+              studioName: profile.studio,
+              ownerName: profile.name,
+              address: profile.address,
+              instagram: profile.instagram,
+              ...whatsapp
+            }
+          })
+        })
+
+        const result = await response.json()
+        if (result.success) {
+          toast({
+            title: "Bot atualizado!",
+            description: "Configurações do bot foram atualizadas.",
+          })
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar bot:', error)
+      }
+    }
+  }
+
+  const handleBotToggle = async () => {
+    setBotStatus(prev => ({ ...prev, loading: true }))
+    
+    try {
+      const action = botStatus.running ? 'stop' : 'start'
+      const config = {
+        studioName: profile.studio,
+        ownerName: profile.name,
+        address: profile.address,
+        instagram: profile.instagram,
+        ...whatsapp
+      }
+
+      const response = await fetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, config })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setBotStatus(prev => ({ 
+          ...prev, 
+          running: action === 'start',
+          showQR: action === 'start'
+        }))
+        
+        toast({
+          title: result.message,
+          description: action === 'start' 
+            ? "QR Code aparecerá abaixo para conexão" 
+            : "Bot do WhatsApp foi parado",
+        })
+      } else {
+        toast({
+          title: "Erro",
+          description: result.message,
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Erro de conexão",
+        description: "Não foi possível conectar com o bot",
+        variant: "destructive"
+      })
+    } finally {
+      setBotStatus(prev => ({ ...prev, loading: false }))
+    }
   }
 
   const handleExportData = () => {
@@ -136,21 +315,23 @@ Agendamento pelo WhatsApp! 📱`,
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-2">
+    <div className="space-y-4 sm:space-y-6 p-2 sm:p-0">
+      <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
         <Settings className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Configurações</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Configurações</h1>
       </div>
 
       <Tabs defaultValue="perfil" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="perfil">Perfil</TabsTrigger>
-          <TabsTrigger value="seguranca">Segurança</TabsTrigger>
-          <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-          <TabsTrigger value="calculadora">Calculadora</TabsTrigger>
-          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-          <TabsTrigger value="dados">Dados</TabsTrigger>
-        </TabsList>
+        <div className="flex justify-center">
+          <TabsList className="flex flex-wrap justify-center gap-1 w-fit max-w-full h-auto p-1">
+            <TabsTrigger value="perfil" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[80px]">Perfil</TabsTrigger>
+            <TabsTrigger value="seguranca" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[80px] hidden xs:flex">Segurança</TabsTrigger>
+            <TabsTrigger value="notificacoes" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[100px] hidden lg:flex">Notificações</TabsTrigger>
+            <TabsTrigger value="calculadora" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[100px]">Calculadora</TabsTrigger>
+            <TabsTrigger value="whatsapp" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[80px]">WhatsApp</TabsTrigger>
+            <TabsTrigger value="dados" className="text-sm sm:text-base px-4 py-2 h-10 min-w-[80px]">Dados</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="perfil" className="space-y-6">
           <Card>
@@ -162,16 +343,16 @@ Agendamento pelo WhatsApp! 📱`,
               <CardDescription>Atualize suas informações de perfil e estúdio</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-20 w-20">
+              <div className="flex flex-col sm:flex-row items-center sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
                   {user?.photoURL ? (
                     <img
                       src={user.photoURL || "/placeholder.svg"}
                       alt={user.displayName || "Avatar"}
-                      className="h-20 w-20 rounded-full object-cover"
+                      className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover"
                     />
                   ) : (
-                    <AvatarFallback className="text-lg">
+                    <AvatarFallback className="text-base sm:text-lg">
                       {profile.name
                         .split(" ")
                         .map((n) => n[0])
@@ -179,33 +360,37 @@ Agendamento pelo WhatsApp! 📱`,
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-sm text-muted-foreground">Foto sincronizada com sua conta Google</p>
                   <p className="text-xs text-muted-foreground mt-1">Para alterar, atualize em sua conta Google</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 space-y-0">
+                <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo</Label>
                   <Input id="name" value={user?.displayName || profile.name} disabled className="bg-muted" />
-                  <p className="text-xs text-muted-foreground mt-1">Sincronizado com sua conta Google</p>
+                  <p className="text-xs text-muted-foreground">Sincronizado com sua conta Google</p>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
                   <Input id="email" type="email" value={user?.email || profile.email} disabled className="bg-muted" />
-                  <p className="text-xs text-muted-foreground mt-1">Sincronizado com sua conta Google</p>
+                  <p className="text-xs text-muted-foreground">Sincronizado com sua conta Google</p>
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
                   <Input
                     id="phone"
                     value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    onChange={(e) => {
+                      const formatted = formatPhone(e.target.value)
+                      setProfile({ ...profile, phone: formatted })
+                    }}
+                    placeholder="+55 11 99999-9999"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="studio">Nome do Estúdio</Label>
                   <Input
                     id="studio"
@@ -360,7 +545,7 @@ Agendamento pelo WhatsApp! 📱`,
                       <Info className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="w-[95vw] sm:w-full max-w-xs sm:max-w-4xl max-h-[90vh] overflow-y-auto mx-auto">
                     <DialogHeader>
                       <DialogTitle className="flex items-center space-x-2">
                         <Calculator className="h-5 w-5" />
@@ -388,7 +573,7 @@ Agendamento pelo WhatsApp! 📱`,
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-3">
                           <h4 className="font-semibold text-primary">Multiplicadores de Complexidade:</h4>
                           <div className="space-y-2 text-sm">
@@ -448,23 +633,26 @@ Agendamento pelo WhatsApp! 📱`,
               </div>
 
               {/* Configurações Básicas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="hourlyRate">Valor por Hora (R$)</Label>
-                  <Input
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hourlyRate">Valor por Hora</Label>
+                  <CurrencyInput
                     id="hourlyRate"
-                    type="number"
                     value={config.hourlyRate}
-                    onChange={(e) => updateConfig({ hourlyRate: Number(e.target.value) })}
+                    onChange={(value) => updateConfig({ hourlyRate: value })}
+                    placeholder="R$ 80,00"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="profitMargin">Margem de Lucro (%)</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="profitMargin">Margem de Lucro</Label>
                   <Input
                     id="profitMargin"
-                    type="number"
-                    value={config.profitMargin}
-                    onChange={(e) => updateConfig({ profitMargin: Number(e.target.value) })}
+                    value={`${config.profitMargin}%`}
+                    onChange={(e) => {
+                      const value = parsePercentage(e.target.value)
+                      updateConfig({ profitMargin: value })
+                    }}
+                    placeholder="30%"
                   />
                 </div>
               </div>
@@ -472,95 +660,89 @@ Agendamento pelo WhatsApp! 📱`,
               {/* Custos de Materiais */}
               <div className="space-y-4">
                 <h4 className="font-medium">Custos de Materiais</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="needleCost">Agulhas por cm² (R$)</Label>
-                    <Input
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="needleCost">Agulhas por cm²</Label>
+                    <CurrencyInput
                       id="needleCost"
-                      type="number"
-                      step="0.1"
                       value={config.materialCosts.needleCost}
-                      onChange={(e) => updateConfig({ 
+                      onChange={(value) => updateConfig({ 
                         materialCosts: { 
                           ...config.materialCosts, 
-                          needleCost: Number(e.target.value) 
+                          needleCost: value 
                         }
                       })}
+                      placeholder="R$ 0,50"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="inkCost">Tintas por cm² (R$)</Label>
-                    <Input
+                  <div className="space-y-2">
+                    <Label htmlFor="inkCost">Tintas por cm²</Label>
+                    <CurrencyInput
                       id="inkCost"
-                      type="number"
-                      step="0.1"
                       value={config.materialCosts.inkCost}
-                      onChange={(e) => updateConfig({ 
+                      onChange={(value) => updateConfig({ 
                         materialCosts: { 
                           ...config.materialCosts, 
-                          inkCost: Number(e.target.value) 
+                          inkCost: value 
                         }
                       })}
+                      placeholder="R$ 2,00"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="gloveCost">Luvas e Descartáveis fixo (R$)</Label>
-                    <Input
+                  <div className="space-y-2">
+                    <Label htmlFor="gloveCost">Luvas e Descartáveis (fixo)</Label>
+                    <CurrencyInput
                       id="gloveCost"
-                      type="number"
-                      step="0.1"
                       value={config.materialCosts.gloveCost}
-                      onChange={(e) => updateConfig({ 
+                      onChange={(value) => updateConfig({ 
                         materialCosts: { 
                           ...config.materialCosts, 
-                          gloveCost: Number(e.target.value) 
+                          gloveCost: value 
                         }
                       })}
+                      placeholder="R$ 5,00"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="filmCost">Filme e Proteção por cm² (R$)</Label>
-                    <Input
+                  <div className="space-y-2">
+                    <Label htmlFor="filmCost">Filme e Proteção por cm²</Label>
+                    <CurrencyInput
                       id="filmCost"
-                      type="number"
-                      step="0.1"
                       value={config.materialCosts.filmCost}
-                      onChange={(e) => updateConfig({ 
+                      onChange={(value) => updateConfig({ 
                         materialCosts: { 
                           ...config.materialCosts, 
-                          filmCost: Number(e.target.value) 
+                          filmCost: value 
                         }
                       })}
+                      placeholder="R$ 0,30"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="ointmentCost">Pomada e Cuidados por cm² (R$)</Label>
-                    <Input
+                  <div className="space-y-2">
+                    <Label htmlFor="ointmentCost">Pomada e Cuidados por cm²</Label>
+                    <CurrencyInput
                       id="ointmentCost"
-                      type="number"
-                      step="0.1"
                       value={config.materialCosts.ointmentCost}
-                      onChange={(e) => updateConfig({ 
+                      onChange={(value) => updateConfig({ 
                         materialCosts: { 
                           ...config.materialCosts, 
-                          ointmentCost: Number(e.target.value) 
+                          ointmentCost: value 
                         }
                       })}
+                      placeholder="R$ 0,80"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="otherCosts">Outros Materiais fixo (R$)</Label>
-                    <Input
+                  <div className="space-y-2">
+                    <Label htmlFor="otherCosts">Outros Materiais (fixo)</Label>
+                    <CurrencyInput
                       id="otherCosts"
-                      type="number"
-                      step="0.1"
                       value={config.materialCosts.otherCosts}
-                      onChange={(e) => updateConfig({ 
+                      onChange={(value) => updateConfig({ 
                         materialCosts: { 
                           ...config.materialCosts, 
-                          otherCosts: Number(e.target.value) 
+                          otherCosts: value 
                         }
                       })}
+                      placeholder="R$ 10,00"
                     />
                   </div>
                 </div>
@@ -611,13 +793,15 @@ Agendamento pelo WhatsApp! 📱`,
                         <div>
                           <Label>Multiplicador de Preço</Label>
                           <Input
-                            type="number"
-                            step="0.1"
-                            value={newComplexityForm.multiplier}
-                            onChange={(e) => setNewComplexityForm({ 
-                              ...newComplexityForm, 
-                              multiplier: Number(e.target.value) 
-                            })}
+                            value={`${newComplexityForm.multiplier.toFixed(1)}x`}
+                            onChange={(e) => {
+                              const value = parseMultiplier(e.target.value)
+                              setNewComplexityForm({ 
+                                ...newComplexityForm, 
+                                multiplier: value 
+                              })
+                            }}
+                            placeholder="2.0x"
                           />
                         </div>
                         <div className="flex space-x-2">
@@ -659,15 +843,17 @@ Agendamento pelo WhatsApp! 📱`,
                 
                 <div className="space-y-2">
                   {config.complexityOptions.map((option) => (
-                    <div key={option.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={option.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg space-y-2 sm:space-y-0">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
                           <span className="font-medium">{option.label}</span>
-                          <span className="text-sm text-muted-foreground">({option.value})</span>
-                          <span className="text-sm bg-primary/10 px-2 py-1 rounded">x{option.multiplier}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-muted-foreground">({option.value})</span>
+                            <span className="text-sm bg-primary/10 px-2 py-1 rounded">x{option.multiplier}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-2 self-end sm:self-center">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="sm" onClick={() => setEditingComplexity(option)}>
@@ -703,13 +889,15 @@ Agendamento pelo WhatsApp! 📱`,
                                 <div>
                                   <Label>Multiplicador de Preço</Label>
                                   <Input
-                                    type="number"
-                                    step="0.1"
-                                    value={editingComplexity.multiplier}
-                                    onChange={(e) => setEditingComplexity({ 
-                                      ...editingComplexity, 
-                                      multiplier: Number(e.target.value) 
-                                    })}
+                                    value={`${editingComplexity.multiplier.toFixed(1)}x`}
+                                    onChange={(e) => {
+                                      const value = parseMultiplier(e.target.value)
+                                      setEditingComplexity({ 
+                                        ...editingComplexity, 
+                                        multiplier: value 
+                                      })
+                                    }}
+                                    placeholder="2.0x"
                                   />
                                 </div>
                                 <div className="flex space-x-2">
@@ -798,13 +986,15 @@ Agendamento pelo WhatsApp! 📱`,
                         <div>
                           <Label>Multiplicador de Dificuldade</Label>
                           <Input
-                            type="number"
-                            step="0.1"
-                            value={newBodyPartForm.multiplier}
-                            onChange={(e) => setNewBodyPartForm({ 
-                              ...newBodyPartForm, 
-                              multiplier: Number(e.target.value) 
-                            })}
+                            value={`${newBodyPartForm.multiplier.toFixed(1)}x`}
+                            onChange={(e) => {
+                              const value = parseMultiplier(e.target.value)
+                              setNewBodyPartForm({ 
+                                ...newBodyPartForm, 
+                                multiplier: value 
+                              })
+                            }}
+                            placeholder="1.5x"
                           />
                         </div>
                         <div className="flex space-x-2">
@@ -846,15 +1036,17 @@ Agendamento pelo WhatsApp! 📱`,
                 
                 <div className="space-y-2">
                   {config.bodyPartOptions.map((option) => (
-                    <div key={option.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={option.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg space-y-2 sm:space-y-0">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
                           <span className="font-medium">{option.label}</span>
-                          <span className="text-sm text-muted-foreground">({option.value})</span>
-                          <span className="text-sm bg-orange-100 px-2 py-1 rounded">x{option.multiplier}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-muted-foreground">({option.value})</span>
+                            <span className="text-sm bg-primary/10 px-2 py-1 rounded">x{option.multiplier}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-2 self-end sm:self-center">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="sm" onClick={() => setEditingBodyPart(option)}>
@@ -890,13 +1082,15 @@ Agendamento pelo WhatsApp! 📱`,
                                 <div>
                                   <Label>Multiplicador de Dificuldade</Label>
                                   <Input
-                                    type="number"
-                                    step="0.1"
-                                    value={editingBodyPart.multiplier}
-                                    onChange={(e) => setEditingBodyPart({ 
-                                      ...editingBodyPart, 
-                                      multiplier: Number(e.target.value) 
-                                    })}
+                                    value={`${editingBodyPart.multiplier.toFixed(1)}x`}
+                                    onChange={(e) => {
+                                      const value = parseMultiplier(e.target.value)
+                                      setEditingBodyPart({ 
+                                        ...editingBodyPart, 
+                                        multiplier: value 
+                                      })
+                                    }}
+                                    placeholder="1.5x"
                                   />
                                 </div>
                                 <div className="flex space-x-2">
@@ -941,7 +1135,7 @@ Agendamento pelo WhatsApp! 📱`,
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex space-x-2 pt-4">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
                 <Button 
                   onClick={() => {
                     toast({
@@ -949,7 +1143,7 @@ Agendamento pelo WhatsApp! 📱`,
                       description: "As configurações da calculadora foram atualizadas.",
                     })
                   }}
-                  className="flex-1"
+                  className="flex-1 w-full sm:w-auto"
                 >
                   Salvar Todas as Configurações
                 </Button>
@@ -962,6 +1156,7 @@ Agendamento pelo WhatsApp! 📱`,
                       description: "Todas as configurações foram restauradas ao padrão.",
                     })
                   }}
+                  className="w-full sm:w-auto"
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Restaurar Padrões
@@ -976,9 +1171,77 @@ Agendamento pelo WhatsApp! 📱`,
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <MessageSquare className="h-5 w-5" />
-                <span>Templates do WhatsApp</span>
+                <span>Bot do WhatsApp</span>
               </CardTitle>
-              <CardDescription>Personalize as mensagens automáticas do WhatsApp</CardDescription>
+              <CardDescription>Controle e configure o bot automático do WhatsApp</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h4 className="font-medium">Status do Bot</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {botStatus.running ? "Bot ativo e respondendo mensagens" : "Bot desativado"}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-3 h-3 rounded-full ${botStatus.running ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <Button 
+                    onClick={handleBotToggle}
+                    disabled={botStatus.loading}
+                    variant={botStatus.running ? "destructive" : "default"}
+                  >
+                    {botStatus.loading ? "Processando..." : (botStatus.running ? "Parar Bot" : "Iniciar Bot")}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="whatsappPhone">Número do WhatsApp</Label>
+                <Input
+                  id="whatsappPhone"
+                  value={whatsapp.phone}
+                  onChange={(e) => {
+                    const formatted = formatPhone(e.target.value)
+                    setWhatsapp({ ...whatsapp, phone: formatted })
+                  }}
+                  placeholder="+55 11 99999-9999"
+                  className="mt-2"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Número que será usado para o bot (com código do país)
+                </p>
+              </div>
+
+              {botStatus.running && !botStatus.showQR && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-medium text-blue-800">Bot Ativo! 🤖</h4>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Seu bot está respondendo mensagens automaticamente.
+                  </p>
+                </div>
+              )}
+
+              {/* Componente QR Code */}
+              <QRCodeDisplay 
+                isVisible={botStatus.showQR} 
+                onConnect={() => {
+                  setBotStatus(prev => ({ ...prev, showQR: false }));
+                  toast({
+                    title: "WhatsApp Conectado!",
+                    description: "Bot ativo e respondendo mensagens.",
+                  });
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="h-5 w-5" />
+                <span>Templates de Mensagens</span>
+              </CardTitle>
+              <CardDescription>Personalize as mensagens automáticas do bot</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
