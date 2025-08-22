@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { useInView } from "react-intersection-observer"
+import CountUp from "react-countup"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -498,34 +501,79 @@ Agendamento pelo WhatsApp! 📱`
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Calculator className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Calculadora de Tatuagem</h1>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsConfigViewOpen(!isConfigViewOpen)}
+      <motion.div 
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.div 
           className="flex items-center space-x-2"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
-          <Eye className="h-4 w-4" />
-          <span>{isConfigViewOpen ? 'Ocultar' : 'Ver'} Configurações</span>
-        </Button>
-      </div>
+          <motion.div
+            animate={{ 
+              rotate: [0, 10, -10, 0],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              duration: 2, 
+              repeat: Infinity, 
+              repeatDelay: 5,
+              ease: "easeInOut"
+            }}
+          >
+            <Calculator className="h-6 w-6 text-primary" />
+          </motion.div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            Calculadora de Tatuagem
+          </h1>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsConfigViewOpen(!isConfigViewOpen)}
+            className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-all duration-300"
+          >
+            <Eye className="h-4 w-4" />
+            <span>{isConfigViewOpen ? 'Ocultar' : 'Ver'} Configurações</span>
+          </Button>
+        </motion.div>
+      </motion.div>
 
       {/* Painel de Configurações */}
-      {isConfigViewOpen && (
-        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-blue-700 dark:text-blue-300">
-              <Settings2 className="h-5 w-5" />
-              <span>Configurações Atuais</span>
-            </CardTitle>
-            <CardDescription className="text-blue-600 dark:text-blue-400">
-              Visualize as configurações definidas na aba de configurações
-            </CardDescription>
-          </CardHeader>
+      <AnimatePresence>
+        {isConfigViewOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -20 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="border-blue-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:border-blue-800 dark:bg-gradient-to-r dark:from-blue-950/20 dark:to-indigo-950/20 backdrop-blur-sm border border-border/50 hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-blue-700 dark:text-blue-300">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Settings2 className="h-5 w-5" />
+                  </motion.div>
+                  <span>Configurações Atuais</span>
+                </CardTitle>
+                <CardDescription className="text-blue-600 dark:text-blue-400">
+                  Visualize as configurações definidas na aba de configurações
+                </CardDescription>
+              </CardHeader>
           <CardContent className="space-y-6">
             {/* Configurações Básicas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -612,14 +660,28 @@ Agendamento pelo WhatsApp! 📱`
             </div>
           </CardContent>
         </Card>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <motion.div 
+        className="grid gap-6 lg:grid-cols-2"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
         {/* Formulário */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Dados da Tatuagem</CardTitle>
-            <CardDescription>Preencha as informações para calcular o orçamento</CardDescription>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <Card className="backdrop-blur-sm bg-card/80 border border-border/50 hover:border-border transition-all duration-300 hover:shadow-lg">
+            <CardHeader>
+              <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Dados da Tatuagem
+              </CardTitle>
+              <CardDescription>Preencha as informações para calcular o orçamento</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -751,40 +813,87 @@ Agendamento pelo WhatsApp! 📱`
               </div>
             </div>
 
-            <Button onClick={calculateTattoo} className="w-full">
-              <Calculator className="h-4 w-4 mr-2" />
-              Calcular Orçamento
-            </Button>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button 
+                onClick={calculateTattoo} 
+                className="w-full bg-primary hover:bg-primary/90 transition-all duration-300"
+              >
+                <Calculator className="h-4 w-4 mr-2" />
+                Calcular Orçamento
+              </Button>
+            </motion.div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Resultado */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Orçamento Calculado</CardTitle>
-            <CardDescription>Detalhamento dos custos e valor final</CardDescription>
-          </CardHeader>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <Card className="backdrop-blur-sm bg-card/80 border border-border/50 hover:border-border transition-all duration-300 hover:shadow-lg">
+            <CardHeader>
+              <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Orçamento Calculado
+              </CardTitle>
+              <CardDescription>Detalhamento dos custos e valor final</CardDescription>
+            </CardHeader>
           <CardContent>
             {calculation ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
+              <motion.div 
+                className="space-y-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <motion.div 
+                  className="grid grid-cols-2 gap-4 text-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <span className="text-muted-foreground">Área:</span>
-                    <p className="font-medium">{calculation.area.toFixed(1)} cm²</p>
-                  </div>
-                  <div>
+                    <p className="font-medium text-primary">
+                      <CountUp end={calculation.area} decimals={1} duration={1} /> cm²
+                    </p>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <span className="text-muted-foreground">Tempo:</span>
-                    <p className="font-medium">{calculation.timeHours}h</p>
-                  </div>
-                </div>
+                    <p className="font-medium text-blue-600">
+                      <CountUp end={calculation.timeHours} duration={1} />h
+                    </p>
+                  </motion.div>
+                </motion.div>
 
-                <div className="space-y-2">
+                <motion.div 
+                  className="space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
                   <h4 className="font-medium">Custos de Materiais:</h4>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
+                    <motion.div 
+                      className="flex justify-between"
+                      whileHover={{ x: 5 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
                       <span>Agulhas:</span>
-                      <span>R$ {(calculation.materialCosts.agulhas || 0).toFixed(2)}</span>
-                    </div>
+                      <span className="font-medium text-green-600">
+                        R$ <CountUp end={calculation.materialCosts.agulhas || 0} decimals={2} duration={1} />
+                      </span>
+                    </motion.div>
                     {(formData.selectedNeedles || []).length > 0 && (
                       <div className="ml-4 space-y-1 text-xs text-muted-foreground">
                         {(formData.selectedNeedles || []).map((needle, index) => (
@@ -834,66 +943,124 @@ Agendamento pelo WhatsApp! 📱`
                       </>
                     )}
                   </div>
-                  <div className="flex justify-between font-medium border-t pt-2">
+                  <motion.div 
+                    className="flex justify-between font-medium border-t pt-2"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
                     <span>Total Materiais:</span>
-                    <span>R$ {(calculation.totalMaterials || 0).toFixed(2)}</span>
-                  </div>
-                </div>
+                    <span className="text-blue-600 font-bold">
+                      R$ <CountUp end={calculation.totalMaterials || 0} decimals={2} duration={1.2} />
+                    </span>
+                  </motion.div>
+                </motion.div>
 
-                <div className="flex justify-between">
+                <motion.div 
+                  className="flex justify-between"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  whileHover={{ x: 5 }}
+                >
                   <span>Mão de obra:</span>
-                  <span className="font-medium">R$ {(calculation.laborCost || 0).toFixed(2)}</span>
-                </div>
+                  <span className="font-medium text-purple-600">
+                    R$ <CountUp end={calculation.laborCost || 0} decimals={2} duration={1.3} />
+                  </span>
+                </motion.div>
 
-                <div className="border-t pt-4">
+                <motion.div 
+                  className="border-t pt-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                >
                   {/* Cupom aplicado */}
-                  {appliedCoupon && (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Ticket className="h-4 w-4 text-green-600" />
-                          <span className="font-medium text-green-700">
-                            Cupom: {appliedCoupon.code}
-                          </span>
+                  <AnimatePresence>
+                    {appliedCoupon && (
+                      <motion.div 
+                        className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg"
+                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <motion.div
+                              animate={{ rotate: [0, 10, -10, 0] }}
+                              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                            >
+                              <Ticket className="h-4 w-4 text-green-600" />
+                            </motion.div>
+                            <span className="font-medium text-green-700">
+                              Cupom: {appliedCoupon.code}
+                            </span>
+                          </div>
+                          <motion.div
+                            whileHover={{ scale: 1.2, rotate: 90 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={removeCoupon}
+                              className="h-6 w-6 p-0 text-green-600 hover:text-red-600 transition-colors duration-300"
+                            >
+                              ×
+                            </Button>
+                          </motion.div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={removeCoupon}
-                          className="h-6 w-6 p-0 text-green-600 hover:text-red-600"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                      <div className="text-sm text-green-600 mt-1">
-                        Desconto: R$ {appliedCoupon.discount.toFixed(2)} 
-                        {appliedCoupon.type === "percentage" 
-                          ? ` (${appliedCoupon.value}%)`
-                          : " (valor fixo)"
-                        }
-                      </div>
-                    </div>
-                  )}
+                        <div className="text-sm text-green-600 mt-1">
+                          Desconto: R$ <CountUp end={appliedCoupon.discount} decimals={2} duration={1} />
+                          {appliedCoupon.type === "percentage" 
+                            ? ` (${appliedCoupon.value}%)`
+                            : " (valor fixo)"
+                          }
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                  <div className="flex justify-between text-lg font-bold">
+                  <motion.div 
+                    className="flex justify-between text-lg font-bold bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                    whileHover={{ scale: 1.02 }}
+                  >
                     <span>VALOR FINAL:</span>
-                    <span className="text-green-500">R$ {(calculation.finalPrice || 0).toFixed(2)}</span>
-                  </div>
+                    <span className="text-green-600 text-xl">
+                      R$ <CountUp end={calculation.finalPrice || 0} decimals={2} duration={1.5} />
+                    </span>
+                  </motion.div>
 
                   {/* Botão para aplicar cupom */}
-                  {!appliedCoupon && (
-                    <div className="mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsCouponDialogOpen(true)}
-                        className="w-full"
+                  <AnimatePresence>
+                    {!appliedCoupon && (
+                      <motion.div 
+                        className="mt-3"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.3 }}
                       >
-                        <Ticket className="h-4 w-4 mr-2" />
-                        Aplicar Cupom
-                      </Button>
-                    </div>
-                  )}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsCouponDialogOpen(true)}
+                            className="w-full hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-700 dark:hover:bg-yellow-950/20 dark:hover:border-yellow-700 dark:hover:text-yellow-400 transition-all duration-300"
+                          >
+                            <Ticket className="h-4 w-4 mr-2" />
+                            Aplicar Cupom
+                          </Button>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   
                   {/* Informações dos multiplicadores aplicados */}
                   {calculation.calculations && (
@@ -917,7 +1084,7 @@ Agendamento pelo WhatsApp! 📱`
                       )}
                     </div>
                   )}
-                </div>
+                </motion.div>
 
                 {/* Seção do Cliente */}
                 <div className="border-t pt-4">
@@ -998,20 +1165,40 @@ Agendamento pelo WhatsApp! 📱`
                   )}
                 </div>
 
-                <div className="flex space-x-2 pt-4">
-                  <Button onClick={shareQuote} className="flex-1">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Compartilhar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 bg-transparent"
-                    onClick={saveQuote}
+                <motion.div 
+                  className="flex space-x-2 pt-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                >
+                  <motion.div
+                    className="flex-1"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    <Save className="h-4 w-4 mr-2" />
-                    {selectedClient ? "Salvar p/ Cliente" : "Salvar"}
-                  </Button>
-                </div>
+                    <Button 
+                      onClick={shareQuote} 
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-300"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Compartilhar
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    className="flex-1"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button 
+                      variant="outline" 
+                      className="w-full hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-all duration-300"
+                      onClick={saveQuote}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {selectedClient ? "Salvar p/ Cliente" : "Salvar"}
+                    </Button>
+                  </motion.div>
+                </motion.div>
 
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Badge variant="secondary">{calculation.complexity}</Badge>
@@ -1019,16 +1206,35 @@ Agendamento pelo WhatsApp! 📱`
                   <Badge variant="outline">{calculation.area.toFixed(1)} cm²</Badge>
                   {selectedClient && <Badge variant="default" className="bg-green-600">Cliente: {selectedClient.name}</Badge>}
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div className="text-center text-muted-foreground py-8">
-                <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <motion.div 
+                className="text-center text-muted-foreground py-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity, 
+                    repeatDelay: 2,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                </motion.div>
                 <p>Preencha os dados para ver o orçamento calculado</p>
-              </div>
+              </motion.div>
             )}
           </CardContent>
         </Card>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Modal de Novo Cliente */}
       <Dialog open={isNewClientOpen} onOpenChange={setIsNewClientOpen}>

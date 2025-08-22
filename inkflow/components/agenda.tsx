@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { useInView } from "react-intersection-observer"
+import CountUp from "react-countup"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -439,41 +442,109 @@ Qualquer dúvida, estou à disposição! Até a próxima! ✨`)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Calendar className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Agenda</h1>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleNewAppointment}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            WhatsApp
-          </Button>
-          <Button onClick={() => setIsNewAppointmentOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Agendamento
-          </Button>
-        </div>
-      </div>
+      <motion.div 
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.div 
+          className="flex items-center space-x-2"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <motion.div
+            animate={{ 
+              rotate: [0, 10, -10, 0],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              duration: 2, 
+              repeat: Infinity, 
+              repeatDelay: 5,
+              ease: "easeInOut"
+            }}
+          >
+            <Calendar className="h-6 w-6 text-primary" />
+          </motion.div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            Agenda
+          </h1>
+        </motion.div>
+        <motion.div 
+          className="flex space-x-2"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button 
+              variant="outline" 
+              onClick={handleNewAppointment}
+              className="hover:bg-green-50 hover:border-green-300 hover:text-green-700 dark:hover:bg-green-950/20 dark:hover:border-green-700 dark:hover:text-green-400 transition-all duration-300"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp
+            </Button>
+          </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button 
+              onClick={() => setIsNewAppointmentOpen(true)}
+              className="bg-primary hover:bg-primary/90 transition-all duration-300"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Agendamento
+            </Button>
+          </motion.div>
+        </motion.div>
+      </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <motion.div 
+        className="grid gap-6 lg:grid-cols-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
         {/* Calendário */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </CardTitle>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="icon" onClick={() => navigateMonth("prev")}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => navigateMonth("next")}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+        <motion.div
+          className="lg:col-span-2"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <Card className="backdrop-blur-sm bg-card/80 border border-border/50 hover:border-border transition-all duration-300">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </CardTitle>
+                <div className="flex space-x-2">
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Button variant="outline" size="icon" onClick={() => navigateMonth("prev")}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Button variant="outline" size="icon" onClick={() => navigateMonth("next")}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </motion.div>
+                </div>
               </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
           <CardContent>
             <div className="grid grid-cols-7 gap-1 mb-4">
               {weekDays.map((day) => (
@@ -483,112 +554,224 @@ Qualquer dúvida, estou à disposição! Até a próxima! ✨`)
               ))}
             </div>
             <div className="grid grid-cols-7 gap-1">
-              {days.map((day, index) => {
-                const hasAppointment = hasAppointments(day.date)
-                const isToday = day.date.toDateString() === new Date().toDateString()
-                const isSelected = day.date.toDateString() === selectedDate.toDateString()
+              <AnimatePresence>
+                {days.map((day, index) => {
+                  const hasAppointment = hasAppointments(day.date)
+                  const isToday = day.date.toDateString() === new Date().toDateString()
+                  const isSelected = day.date.toDateString() === selectedDate.toDateString()
 
-                return (
-                  <button
-                    key={index}
-                    onClick={() => day.isCurrentMonth ? handleDateClick(day.date) : setSelectedDate(day.date)}
-                    className={`
-                      p-2 text-sm rounded-md transition-colors relative
-                      ${!day.isCurrentMonth ? "text-muted-foreground" : ""}
-                      ${isToday ? "bg-primary text-primary-foreground" : ""}
-                      ${isSelected && !isToday ? "bg-accent" : ""}
-                      ${hasAppointment ? "font-bold" : ""}
-                      hover:bg-accent cursor-pointer
-                      ${day.isCurrentMonth ? "hover:bg-primary/10" : ""}
-                    `}
-                  >
-                    {day.date.getDate()}
-                    {hasAppointment && (
-                      <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />
-                    )}
-                    {day.isCurrentMonth && !hasAppointment && (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <Plus className="h-3 w-3 text-primary" />
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
+                  return (
+                    <motion.button
+                      key={index}
+                      onClick={() => day.isCurrentMonth ? handleDateClick(day.date) : setSelectedDate(day.date)}
+                      className={`
+                        p-2 text-sm rounded-md transition-colors relative
+                        ${!day.isCurrentMonth ? "text-muted-foreground" : ""}
+                        ${isToday ? "bg-primary text-primary-foreground shadow-lg" : ""}
+                        ${isSelected && !isToday ? "bg-accent ring-2 ring-primary/20" : ""}
+                        ${hasAppointment ? "font-bold" : ""}
+                        hover:bg-accent cursor-pointer
+                        ${day.isCurrentMonth ? "hover:bg-primary/10" : ""}
+                      `}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2, delay: index * 0.01 }}
+                      whileHover={{ 
+                        scale: 1.1, 
+                        backgroundColor: isToday ? undefined : "rgba(var(--primary), 0.1)",
+                        transition: { duration: 0.2 }
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {day.date.getDate()}
+                      {hasAppointment && (
+                        <motion.div 
+                          className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.3, delay: 0.2 }}
+                        />
+                      )}
+                      {day.isCurrentMonth && !hasAppointment && (
+                        <motion.div 
+                          className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                          whileHover={{ opacity: 1 }}
+                        >
+                          <Plus className="h-3 w-3 text-primary" />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  )
+                })}
+              </AnimatePresence>
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Agendamentos do Dia */}
-        <div className="space-y-6">
+        <motion.div 
+          className="space-y-6"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
           {/* Estatísticas do Dia */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {selectedDate.toLocaleDateString("pt-BR", {
-                  day: "numeric",
-                  month: "long",
-                  year: selectedDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-                })}
-              </CardTitle>
-              <CardDescription>Resumo do dia selecionado</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{dayStats.totalAppointments}</div>
-                  <div className="text-xs text-muted-foreground">Agendamentos</div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
+            <Card className="backdrop-blur-sm bg-gradient-to-br from-card/80 to-card/60 border border-border/50 hover:border-primary/20 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
+              <CardHeader>
+                <CardTitle className="text-lg bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {selectedDate.toLocaleDateString("pt-BR", {
+                    day: "numeric",
+                    month: "long",
+                    year: selectedDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+                  })}
+                </CardTitle>
+                <CardDescription>Resumo do dia selecionado</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <motion.div 
+                    className="text-center group"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <motion.div 
+                      className="text-2xl font-bold text-primary"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.7 }}
+                    >
+                      <CountUp end={dayStats.totalAppointments} duration={1} />
+                    </motion.div>
+                    <div className="text-xs text-muted-foreground group-hover:text-primary/80 transition-colors">Agendamentos</div>
+                  </motion.div>
+                  <motion.div 
+                    className="text-center group"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <motion.div 
+                      className="text-2xl font-bold text-blue-600"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.8 }}
+                    >
+                      <CountUp end={dayStats.estimatedDuration} duration={1} />h
+                    </motion.div>
+                    <div className="text-xs text-muted-foreground group-hover:text-blue-600/80 transition-colors">Tempo estimado</div>
+                  </motion.div>
+                  <motion.div 
+                    className="text-center group"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <motion.div 
+                      className="text-2xl font-bold text-green-600"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.9 }}
+                    >
+                      R$ <CountUp end={dayStats.estimatedRevenue} duration={1} />
+                    </motion.div>
+                    <div className="text-xs text-muted-foreground group-hover:text-green-600/80 transition-colors">Receita prevista</div>
+                  </motion.div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{dayStats.estimatedDuration}h</div>
-                  <div className="text-xs text-muted-foreground">Tempo estimado</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">R$ {dayStats.estimatedRevenue.toFixed(0)}</div>
-                  <div className="text-xs text-muted-foreground">Receita prevista</div>
-                </div>
-              </div>
-              
-              <Button 
-                onClick={() => setIsNewAppointmentOpen(true)} 
-                className="w-full"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Agendamento
-              </Button>
-            </CardContent>
-          </Card>
+                
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button 
+                    onClick={() => setIsNewAppointmentOpen(true)} 
+                    className="w-full bg-primary hover:bg-primary/90 transition-all duration-300"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Agendamento
+                  </Button>
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Sugestões de Estoque */}
           {stockSuggestions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Alertas de Estoque
-                </CardTitle>
-                <CardDescription>Itens que precisam de atenção</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {stockSuggestions.map((suggestion, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20">
-                      <div className="flex items-center space-x-3">
-                        {suggestion.type === 'out' ? (
-                          <TrendingDown className="h-4 w-4 text-red-500" />
-                        ) : (
-                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium">{suggestion.item.name}</p>
-                          <p className="text-xs text-muted-foreground">{suggestion.message}</p>
-                        </div>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => {
-                          const message = encodeURIComponent(`🛒 *PEDIDO DE REPOSIÇÃO*
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 1.0 }}
+            >
+              <Card className="backdrop-blur-sm bg-gradient-to-br from-yellow-50/80 to-orange-50/80 dark:from-yellow-950/20 dark:to-orange-950/20 border border-yellow-200/50 dark:border-yellow-800/50 hover:border-yellow-300/70 dark:hover:border-yellow-700/70 transition-all duration-300">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <motion.div
+                      animate={{ 
+                        rotate: [0, -10, 10, 0],
+                        scale: [1, 1.1, 1]
+                      }}
+                      transition={{ 
+                        duration: 2, 
+                        repeat: Infinity, 
+                        repeatDelay: 3,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <Package className="h-5 w-5 mr-2 text-yellow-600" />
+                    </motion.div>
+                    Alertas de Estoque
+                  </CardTitle>
+                  <CardDescription>Itens que precisam de atenção</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <AnimatePresence>
+                      {stockSuggestions.map((suggestion, index) => (
+                        <motion.div 
+                          key={index} 
+                          className="flex items-center justify-between p-3 rounded-lg border bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 hover:shadow-md transition-all duration-300"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                          whileHover={{ scale: 1.02, x: 5 }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <motion.div
+                              animate={{ 
+                                rotate: suggestion.type === 'out' ? [0, -15, 15, 0] : [0, 10, -10, 0]
+                              }}
+                              transition={{ 
+                                duration: 1.5, 
+                                repeat: Infinity, 
+                                repeatDelay: 2 
+                              }}
+                            >
+                              {suggestion.type === 'out' ? (
+                                <TrendingDown className="h-4 w-4 text-red-500" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              )}
+                            </motion.div>
+                            <div>
+                              <p className="text-sm font-medium">{suggestion.item.name}</p>
+                              <p className="text-xs text-muted-foreground">{suggestion.message}</p>
+                            </div>
+                          </div>
+                          <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-all duration-300"
+                              onClick={() => {
+                                const message = encodeURIComponent(`🛒 *PEDIDO DE REPOSIÇÃO*
 
 📦 Item: ${suggestion.item.name}
 🏷️ Marca: ${suggestion.item.brand || "Sem marca"}
@@ -596,39 +779,70 @@ Qualquer dúvida, estou à disposição! Até a próxima! ✨`)
 📈 Quantidade sugerida: ${(suggestion.item.maximumStock || 100) - (suggestion.item.quantity || 0)}
 
 Gostaria de fazer este pedido!`)
-                          window.open(`https://wa.me/?text=${message}`, "_blank")
-                        }}
-                      >
-                        <ShoppingCart className="h-3 w-3 mr-1" />
-                        Repor
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                                window.open(`https://wa.me/?text=${message}`, "_blank")
+                              }}
+                            >
+                              <ShoppingCart className="h-3 w-3 mr-1" />
+                              Repor
+                            </Button>
+                          </motion.div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
           {/* Lista de Agendamentos */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Agendamentos</CardTitle>
-              <CardDescription>Detalhes dos agendamentos do dia</CardDescription>
-            </CardHeader>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 1.1 }}
+          >
+            <Card className="backdrop-blur-sm bg-card/80 border border-border/50 hover:border-border transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-lg bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Agendamentos
+                </CardTitle>
+                <CardDescription>Detalhes dos agendamentos do dia</CardDescription>
+              </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <motion.div 
+                className="flex items-center justify-center py-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <Loader2 className="h-6 w-6 text-primary mr-2" />
+                </motion.div>
                 <span>Carregando agendamentos...</span>
-              </div>
+              </motion.div>
             ) : (
               <div className="space-y-4">
-                {selectedDateAppointments.map((appointment: any) => (
-                  <div 
-                    key={appointment.id} 
-                    className="p-4 border rounded-lg space-y-3 cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => openAppointmentDetail(appointment)}
-                  >
+                <AnimatePresence>
+                  {selectedDateAppointments.map((appointment: any, index: number) => (
+                    <motion.div 
+                      key={appointment.id} 
+                      className="p-4 border rounded-lg space-y-3 cursor-pointer hover:bg-accent/50 transition-colors bg-gradient-to-r from-card/50 to-card/30 backdrop-blur-sm border-border/50 hover:border-primary/20 hover:shadow-lg"
+                      onClick={() => openAppointmentDetail(appointment)}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      whileHover={{ 
+                        scale: 1.02, 
+                        y: -2,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <Avatar className="h-8 w-8">
@@ -694,7 +908,7 @@ Gostaria de fazer este pedido!`)
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1 bg-transparent"
+                            className="w-full hover:bg-green-50 hover:border-green-300 hover:text-green-700 dark:hover:bg-green-950/20 dark:hover:border-green-700 dark:hover:text-green-400 transition-all duration-300"
                             onClick={() => handleContactClient(appointment.clientPhone, appointment.clientName)}
                           >
                             <MessageSquare className="h-3 w-3 mr-1" />
@@ -703,44 +917,85 @@ Gostaria de fazer este pedido!`)
                           <Button
                             size="sm"
                             variant="outline"
+                            className="hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-all duration-300"
                             onClick={() => window.open(`tel:${appointment.clientPhone}`, "_self")}
                           >
                             <Phone className="h-3 w-3" />
                           </Button>
                         </>
                       )}
-                    </div>
-                  </div>
-                ))}
-
-                {selectedDateAppointments.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>                {selectedDateAppointments.length === 0 && (
+                  <motion.div 
+                    className="text-center text-muted-foreground py-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <motion.div
+                      animate={{ 
+                        rotate: [0, 10, -10, 0],
+                        scale: [1, 1.1, 1]
+                      }}
+                      transition={{ 
+                        duration: 3, 
+                        repeat: Infinity, 
+                        repeatDelay: 2,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    </motion.div>
                     <p>Nenhum agendamento para este dia</p>
-                    <Button variant="outline" size="sm" className="mt-2 bg-transparent" onClick={() => setIsNewAppointmentOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Agendar Cliente
-                    </Button>
-                  </div>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2 hover:bg-primary/10 hover:border-primary/30 hover:text-primary dark:hover:bg-primary/20 transition-all duration-300" 
+                        onClick={() => setIsNewAppointmentOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Agendar Cliente
+                      </Button>
+                    </motion.div>
+                  </motion.div>
                 )}
               </div>
             )}
           </CardContent>
         </Card>
-        </div>
-      </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
 
       {/* Modal de Novo Agendamento */}
       <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Agendamento</DialogTitle>
-            <DialogDescription>
-              Selecione um cliente e vincule um orçamento ao agendamento
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto backdrop-blur-sm bg-card/95 border border-border/50">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DialogHeader>
+              <DialogTitle className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                Novo Agendamento
+              </DialogTitle>
+              <DialogDescription>
+                Selecione um cliente e vincule um orçamento ao agendamento
+              </DialogDescription>
+            </DialogHeader>
+            
+            <motion.div 
+              className="space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
             {/* Seleção de Cliente */}
             <div>
               <Label htmlFor="clientSelect">Cliente *</Label>
@@ -876,27 +1131,45 @@ Gostaria de fazer este pedido!`)
 
             {/* Botões */}
             <div className="flex space-x-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsNewAppointmentOpen(false)}
+              <motion.div
                 className="flex-1"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleCreateAppointment} 
-                disabled={isLoadingAppointment} 
+                <Button
+                  variant="outline"
+                  onClick={() => setIsNewAppointmentOpen(false)}
+                  className="w-full hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-950/20 dark:hover:border-red-700 dark:hover:text-red-400 transition-all duration-300"
+                >
+                  Cancelar
+                </Button>
+              </motion.div>
+              <motion.div
                 className="flex-1"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {isLoadingAppointment ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Plus className="h-4 w-4 mr-2" />
-                )}
-                Agendar
-              </Button>
+                <Button 
+                  onClick={handleCreateAppointment} 
+                  disabled={isLoadingAppointment} 
+                  className="w-full bg-primary hover:bg-primary/90 transition-all duration-300"
+                >
+                  {isLoadingAppointment ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Loader2 className="h-4 w-4 mr-2" />
+                    </motion.div>
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Agendar
+                </Button>
+              </motion.div>
             </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </DialogContent>
       </Dialog>
 
@@ -976,7 +1249,7 @@ Gostaria de fazer este pedido!`)
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full"
+                            className="w-full hover:bg-green-50 hover:border-green-300 hover:text-green-700 dark:hover:bg-green-950/20 dark:hover:border-green-700 dark:hover:text-green-400 transition-all duration-300"
                             onClick={() => handleContactClient(selectedAppointment.clientPhone, selectedAppointment.clientName)}
                           >
                             <MessageSquare className="h-4 w-4 mr-2" />
@@ -985,7 +1258,7 @@ Gostaria de fazer este pedido!`)
                           <Button
                             size="sm"
                             variant="outline"
-                            className="w-full"
+                            className="w-full hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-all duration-300"
                             onClick={() => window.open(`tel:${selectedAppointment.clientPhone}`, "_self")}
                           >
                             <Phone className="h-4 w-4 mr-2" />
@@ -1017,14 +1290,14 @@ Gostaria de fazer este pedido!`)
                         <div className="flex space-x-2">
                           <Button
                             variant="outline"
-                            className="flex-1"
+                            className="flex-1 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950/20 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-all duration-300"
                             onClick={() => setIsEditingAppointment(true)}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
                           </Button>
                           <Button
-                            className="flex-1"
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-all duration-300"
                             onClick={() => setIsFinishingAppointment(true)}
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
@@ -1032,7 +1305,7 @@ Gostaria de fazer este pedido!`)
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="icon">
+                              <Button variant="destructive" size="icon" className="hover:bg-red-600 transition-all duration-300">
                                 <Trash className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -1123,14 +1396,14 @@ Gostaria de fazer este pedido!`)
                               <Button
                                 variant="outline"
                                 onClick={() => setIsEditingAppointment(false)}
-                                className="flex-1"
+                                className="flex-1 hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-950/20 dark:hover:border-red-700 dark:hover:text-red-400 transition-all duration-300"
                               >
                                 Cancelar
                               </Button>
                               <Button
                                 onClick={handleUpdateAppointment}
                                 disabled={isLoadingAppointment}
-                                className="flex-1"
+                                className="flex-1 bg-primary hover:bg-primary/90 transition-all duration-300"
                               >
                                 {isLoadingAppointment && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                                 Salvar
@@ -1202,14 +1475,14 @@ Gostaria de fazer este pedido!`)
                               <Button
                                 variant="outline"
                                 onClick={() => setIsFinishingAppointment(false)}
-                                className="flex-1"
+                                className="flex-1 hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-950/20 dark:hover:border-red-700 dark:hover:text-red-400 transition-all duration-300"
                               >
                                 Cancelar
                               </Button>
                               <Button
                                 onClick={handleFinishAppointment}
                                 disabled={isLoadingAppointment}
-                                className="flex-1"
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-all duration-300"
                               >
                                 {isLoadingAppointment && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                                 <CheckCircle className="h-4 w-4 mr-2" />

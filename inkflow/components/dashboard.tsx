@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { useInView } from "react-intersection-observer"
+import CountUp from "react-countup"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +24,14 @@ import {
   Package,
   AlertTriangle,
   Loader2,
+  Sparkles,
+  Target,
+  Award,
+  Zap,
+  ChevronUp,
+  Eye,
+  ArrowUpRight,
+  Activity
 } from "lucide-react"
 import { useAppointments, useClients, useInventory, usePayments, useQuotes } from "@/lib/firebase-hooks-user"
 import { format, isToday, isTomorrow, startOfDay, endOfDay } from "date-fns"
@@ -37,6 +48,12 @@ export function Dashboard() {
   const { quotes, loading: loadingQuotes } = useQuotes()
   
   const { toast } = useToast()
+
+  // Intersection observers para animações
+  const [headerRef, headerInView] = useInView({ threshold: 0.2, triggerOnce: true })
+  const [statsRef, statsInView] = useInView({ threshold: 0.2, triggerOnce: true })
+  const [appointmentsRef, appointmentsInView] = useInView({ threshold: 0.2, triggerOnce: true })
+  const [alertsRef, alertsInView] = useInView({ threshold: 0.2, triggerOnce: true })
   
   // Estados para o modal de novo agendamento
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false)
@@ -345,106 +362,389 @@ Responda com essas informações para eu preparar seu orçamento! 🎨`)
 
   if (loadingAppointments || loadingClients || loadingPayments || loadingInventory || !userProfile) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Carregando dados...</span>
-      </div>
+      <motion.div 
+        className="flex items-center justify-center h-64"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="h-8 w-8 text-primary" />
+        </motion.div>
+        <motion.span 
+          className="ml-2"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          Carregando dados...
+        </motion.span>
+      </motion.div>
     )
   }
 
+  // Variantes de animação
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: [0.4, 0, 0.2, 1]
+      }
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       {/* Header com botões de ação */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <TrendingUp className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleNewAppointment}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            WhatsApp
-          </Button>
-          <Button onClick={() => setIsNewAppointmentOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Agendamento
-          </Button>
-        </div>
-      </div>
+      <motion.div 
+        ref={headerRef}
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.div 
+          className="flex items-center space-x-2"
+          whileHover={{ scale: 1.02 }}
+        >
+          <motion.div
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <TrendingUp className="h-6 w-6 text-primary" />
+          </motion.div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            Dashboard
+          </h1>
+          <motion.div
+            className="px-2 py-1 bg-primary/10 rounded-full"
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Sparkles className="h-4 w-4 text-primary" />
+          </motion.div>
+        </motion.div>
+        <motion.div 
+          className="flex space-x-2"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button variant="outline" onClick={handleNewAppointment} className="relative overflow-hidden group">
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/20 to-green-500/0"
+                animate={{ x: [-100, 300] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button onClick={() => setIsNewAppointmentOpen(true)} className="relative overflow-hidden group">
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
+                animate={{ x: [-100, 300] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Agendamento
+            </Button>
+          </motion.div>
+        </motion.div>
+      </motion.div>
 
       {/* Mensagem de Boas Vindas */}
-      <Card className={`bg-gradient-to-r ${welcomeMessage.gradient} text-white border-0 shadow-lg transform transition-all duration-300 hover:shadow-xl hover:scale-[1.01]`}>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-2 animate-in slide-in-from-left duration-500">{welcomeMessage.greeting}</h2>
-              <p className="text-white/90 opacity-90 animate-in slide-in-from-left duration-700">{welcomeMessage.motivation}</p>
-              {userProfile?.studio && (
-                <div className="mt-3 flex items-center space-x-2 text-white/80 animate-in slide-in-from-left duration-900">
-                  <div className="w-2 h-2 bg-white/60 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">{userProfile.studio}</span>
-                </div>
-              )}
-            </div>
-            <div className="hidden md:block ml-4 animate-in slide-in-from-right duration-700">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-white/30 transition-colors duration-300">
-                <TrendingUp className="h-8 w-8 text-white" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        whileHover={{ scale: 1.02, y: -5 }}
+      >
+        <Card className={`bg-gradient-to-r ${welcomeMessage.gradient} text-white border-0 shadow-2xl relative overflow-hidden`}>
+          {/* Elementos decorativos */}
+          <motion.div
+            className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-xl"
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{ duration: 4, repeat: Infinity }}
+          />
+          <motion.div
+            className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-lg"
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              opacity: [0.2, 0.4, 0.2]
+            }}
+            transition={{ duration: 3, repeat: Infinity }}
+          />
+          
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <motion.h2 
+                  className="text-xl font-bold mb-2"
+                  initial={{ x: -50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                >
+                  {welcomeMessage.greeting}
+                </motion.h2>
+                <motion.p 
+                  className="text-white/90 opacity-90"
+                  initial={{ x: -50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ duration: 0.6, delay: 0.7 }}
+                >
+                  {welcomeMessage.motivation}
+                </motion.p>
+                {userProfile?.studio && (
+                  <motion.div 
+                    className="mt-3 flex items-center space-x-2 text-white/80"
+                    initial={{ x: -50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.9 }}
+                  >
+                    <motion.div 
+                      className="w-2 h-2 bg-white/60 rounded-full"
+                      animate={{ scale: [1, 1.3, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    <span className="text-sm font-medium">{userProfile.studio}</span>
+                  </motion.div>
+                )}
               </div>
+              <motion.div 
+                className="hidden md:block ml-4"
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.7 }}
+                whileHover={{ scale: 1.1, rotate: 5 }}
+              >
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-white/30 transition-colors duration-300">
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  >
+                    <TrendingUp className="h-8 w-8 text-white" />
+                  </motion.div>
+                </div>
+              </motion.div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganhos Hoje</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">{formatCurrency(stats.todayEarnings)}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.todayEarnings > 0 ? "Receita do dia atual" : "Nenhuma receita hoje"}
-            </p>
-          </CardContent>
-        </Card>
+      <motion.div 
+        ref={statsRef}
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.4, staggerChildren: 0.1 }}
+      >
+        <motion.div
+          whileHover={{ scale: 1.05, y: -5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Card className="relative overflow-hidden border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-transparent"
+              initial={{ x: -100 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.8, delay: 0.5 }}
+            />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium">Ganhos Hoje</CardTitle>
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <DollarSign className="h-4 w-4 text-green-500" />
+              </motion.div>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <motion.div 
+                className="text-2xl font-bold text-green-500"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.7 }}
+              >
+                {statsInView ? (
+                  <CountUp
+                    start={0}
+                    end={stats.todayEarnings}
+                    duration={2}
+                    separator="."
+                    decimal=","
+                    decimals={2}
+                    prefix="R$ "
+                  />
+                ) : (
+                  formatCurrency(stats.todayEarnings)
+                )}
+              </motion.div>
+              <p className="text-xs text-muted-foreground">
+                {stats.todayEarnings > 0 ? "Receita do dia atual" : "Nenhuma receita hoje"}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agendamentos Hoje</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.confirmedAppointments} confirmados, {stats.pendingAppointments} pendentes
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div
+          whileHover={{ scale: 1.05, y: -5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Card className="relative overflow-hidden border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent"
+              initial={{ x: -100 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium">Agendamentos Hoje</CardTitle>
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                <Calendar className="h-4 w-4 text-blue-500" />
+              </motion.div>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <motion.div 
+                className="text-2xl font-bold"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.8 }}
+              >
+                {statsInView ? (
+                  <CountUp
+                    start={0}
+                    end={stats.todayAppointments}
+                    duration={1.5}
+                  />
+                ) : (
+                  stats.todayAppointments
+                )}
+              </motion.div>
+              <p className="text-xs text-muted-foreground">
+                {stats.confirmedAppointments} confirmados, {stats.pendingAppointments} pendentes
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeClients}</div>
-            <p className="text-xs text-muted-foreground">+{stats.newClientsThisMonth} novos este mês</p>
-          </CardContent>
-        </Card>
+        <motion.div
+          whileHover={{ scale: 1.05, y: -5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Card className="relative overflow-hidden border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent"
+              initial={{ x: -100 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.8, delay: 0.7 }}
+            />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
+              <motion.div
+                animate={{ y: [0, -3, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Users className="h-4 w-4 text-purple-500" />
+              </motion.div>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <motion.div 
+                className="text-2xl font-bold"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.9 }}
+              >
+                {statsInView ? (
+                  <CountUp
+                    start={0}
+                    end={stats.activeClients}
+                    duration={1.8}
+                  />
+                ) : (
+                  stats.activeClients
+                )}
+              </motion.div>
+              <p className="text-xs text-muted-foreground">
+                +{stats.newClientsThisMonth} novos este mês
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Ocupação</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.occupancyRate}%</div>
-            <p className="text-xs text-muted-foreground">Semana atual</p>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div
+          whileHover={{ scale: 1.05, y: -5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Card className="relative overflow-hidden border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent"
+              initial={{ x: -100 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+            />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardTitle className="text-sm font-medium">Taxa de Ocupação</CardTitle>
+              <motion.div
+                animate={{ rotate: [0, 180, 360] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <TrendingUp className="h-4 w-4 text-orange-500" />
+              </motion.div>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <motion.div 
+                className="text-2xl font-bold"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 1.0 }}
+              >
+                {statsInView ? (
+                  <CountUp
+                    start={0}
+                    end={stats.occupancyRate}
+                    duration={2}
+                    suffix="%"
+                  />
+                ) : (
+                  `${stats.occupancyRate}%`
+                )}
+              </motion.div>
+              <p className="text-xs text-muted-foreground">Semana atual</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* Alertas de Estoque */}
       <Card>
@@ -806,6 +1106,6 @@ Responda com essas informações para eu preparar seu orçamento! 🎨`)
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   )
 }

@@ -45,6 +45,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const activityTimerRef = useRef<NodeJS.Timeout>()
   const sessionValidationRef = useRef<NodeJS.Timeout>()
 
+  // Função helper para definir sessionId e salvar no localStorage
+  const setAndSaveSessionId = (sessionId: string | null) => {
+    setCurrentSessionId(sessionId)
+    if (sessionId) {
+      localStorage.setItem('inkflow_session_id', sessionId)
+    } else {
+      localStorage.removeItem('inkflow_session_id')
+    }
+  }
+
+  // Carregar sessionId do localStorage na inicialização
+  useEffect(() => {
+    const savedSessionId = localStorage.getItem('inkflow_session_id')
+    if (savedSessionId) {
+      setCurrentSessionId(savedSessionId)
+    }
+  }, [])
+
   // Atualizar atividade da sessão periodicamente
   useEffect(() => {
     if (currentSessionId && user) {
@@ -87,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(null)
     setUserProfile(null)
-    setCurrentSessionId(null)
+    setAndSaveSessionId(null)
     setActiveSessions([])
 
     // Não chamar signOut do Firebase para evitar conflitos
@@ -99,10 +117,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Verificar se já temos uma sessão ativa
-        if (!currentSessionId) {
+        // Verificar se já temos uma sessão ativa salva
+        const savedSessionId = localStorage.getItem('inkflow_session_id')
+        
+        if (savedSessionId && currentSessionId) {
+          // Verificar se a sessão salva ainda é válida
+          const isValid = await isSessionValid(savedSessionId)
+          if (isValid) {
+            // Atualizar atividade da sessão existente
+            await updateSessionActivity(savedSessionId)
+          } else {
+            // Sessão inválida, criar nova
+            const sessionId = generateSessionId()
+            setAndSaveSessionId(sessionId)
+            await createSession(user, sessionId)
+          }
+        } else if (savedSessionId && !currentSessionId) {
+          // Temos uma sessão salva mas não carregada no estado
+          const isValid = await isSessionValid(savedSessionId)
+          if (isValid) {
+            setAndSaveSessionId(savedSessionId)
+            await updateSessionActivity(savedSessionId)
+          } else {
+            // Sessão inválida, criar nova
+            const sessionId = generateSessionId()
+            setAndSaveSessionId(sessionId)
+            await createSession(user, sessionId)
+          }
+        } else if (!currentSessionId) {
+          // Não temos sessão, criar nova
           const sessionId = generateSessionId()
-          setCurrentSessionId(sessionId)
+          setAndSaveSessionId(sessionId)
           await createSession(user, sessionId)
         }
 
@@ -129,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUserProfile(null)
-        setCurrentSessionId(null)
+        setAndSaveSessionId(null)
         setActiveSessions([])
       }
 
@@ -155,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Criar nova sessão
       const sessionId = generateSessionId()
-      setCurrentSessionId(sessionId)
+      setAndSaveSessionId(sessionId)
       await createSession(user, sessionId)
 
       // Verificar se é o primeiro login e criar/atualizar perfil
